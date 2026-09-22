@@ -60,7 +60,7 @@ contract ForkedWeekendTest is Test {
 
     function edges() internal pure returns (int256[] memory e) {
         e = new int256[](6);
-        (e[0], e[1], e[2], e[3], e[4], e[5]) = (-500, -200, -50, 50, 200, 500);
+        (e[0], e[1], e[2], e[3], e[4], e[5]) = (-300, -100, -25, 25, 100, 300);
     }
 
     function test_FullWeekendCycleOnDeployedContracts() public {
@@ -90,10 +90,15 @@ contract ForkedWeekendTest is Test {
 
         // 3. A market opens and becomes the oracle's source.
         vm.prank(maker);
-        uint256 id = gm.createMarket(AggregatorV3Interface(address(feed)), edges(), 20e18, 300);
+        uint256 id = gm.createMarket(AggregatorV3Interface(address(feed)), edges(), 20e18, 200);
         oracle.setActiveMarket(id);
         (,, , bool implied) = oracle.priceBand();
         assertTrue(implied, "oracle now publishes a market price");
+
+        // 3b. The pool insures its own loan book against a crash, paying the underwriter a fee.
+        (uint256 cover, uint256 premium) = pool.hedge(id);
+        assertGt(cover, 0, "pool bought crash cover");
+        assertLe(premium, pool.totalDebt() / 100, "premium within 1% of loans");
 
         // 4. Traders price a gap down; borrowing power shrinks, the position stays safe.
         vm.prank(bear);
@@ -107,21 +112,24 @@ contract ForkedWeekendTest is Test {
         // 5. The session reopens; the relayer posts the first round and anyone can settle.
         GapMarket.Market memory m = gm.getMarket(id);
         vm.warp(uint256(m.reopenTs) + 1 minutes);
-        int256 reopenPrice = livePrice * 97 / 100; // reopens 3% down
+        int256 reopenPrice = livePrice * 96 / 100; // reopens 4% down, into the crash range
         vm.prank(relayer);
         uint80 round = feed.mirror(reopenPrice, uint256(m.reopenTs) + 30, uint256(m.reopenTs) + 30);
         gm.resolve(id, round);
 
         m = gm.getMarket(id);
         assertTrue(m.resolved);
-        assertEq(m.winner, 1, "-3% lands in the -5% to -2% range");
+        assertEq(m.winner, 0, "-4% lands in the -3%-or-worse range");
 
-        // 6. Winners redeem, the maker sweeps the rest, and the oracle is live again.
-        vm.prank(bear);
-        uint256 payout = gm.redeem(id);
-        assertGt(payout, 0, "bear is paid for calling the gap");
-        vm.prank(maker);
+        // 6. The pool's cover pays out, the maker sweeps the rest plus fees, and the oracle is live again.
+        uint256 poolBefore = usdg.balanceOf(address(pool));
+        uint256 payout = pool.collectHedge(id);
+        assertEq(payout, cover / 1e12, "each winning share pays 1 USDG into the pool");
+        assertEq(usdg.balanceOf(address(pool)) - poolBefore, payout);
+        vm.startPrank(maker);
         gm.withdrawResidual(id);
+        assertGt(gm.claimFees(id), 0, "underwriter earned fees from the pool and the bear");
+        vm.stopPrank();
         (,,, implied) = oracle.priceBand();
         assertFalse(implied, "back to the live feed once the session reopens");
     }
