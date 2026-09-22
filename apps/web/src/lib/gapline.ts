@@ -113,6 +113,40 @@ export function useSessionStatus() {
 	};
 }
 
+/**
+ * When the current 24/5 run of sessions ends. The calendar exposes session boundaries (20:00 ET each day) and
+ * isOpen, so read the next week of boundaries and take the first one that is closed.
+ */
+export function useNextClose() {
+	const now = BigInt(Math.floor(Date.now() / 1000));
+	const day = useReadContract({
+		...calendar,
+		functionName: "tradingDayOf",
+		args: [now],
+	});
+	const boundaries = useReadContracts({
+		contracts: Array.from({ length: 8 }, (_, k) => ({
+			...calendar,
+			functionName: "sessionStart" as const,
+			args: [(day.data ?? 0n) + BigInt(k + 1)],
+		})),
+		query: { enabled: day.data !== undefined },
+	});
+	const starts = (boundaries.data ?? [])
+		.map((b) => b.result as bigint | undefined)
+		.filter((b): b is bigint => b !== undefined);
+	const open = useReadContracts({
+		contracts: starts.map((ts) => ({
+			...calendar,
+			functionName: "isOpen" as const,
+			args: [ts],
+		})),
+		query: { enabled: starts.length > 0 },
+	});
+	const firstClosed = open.data?.findIndex((r) => r.result === false) ?? -1;
+	return firstClosed >= 0 ? starts[firstClosed] : undefined;
+}
+
 export type MarketView = {
 	id: bigint;
 	refPrice: bigint;
@@ -263,19 +297,18 @@ export function usePosition() {
 			{ ...pool, functionName: "debtOf", args: [address ?? "0x0"] },
 			{ ...pool, functionName: "maxBorrow", args: [address ?? "0x0"] },
 			{ ...pool, functionName: "isLiquidatable", args: [address ?? "0x0"] },
-			{ ...pool, functionName: "riskPrice" },
-			{ ...pool, functionName: "liquidationPrice" },
 		],
 		query: { enabled: Boolean(address) },
 	});
-	const [
-		collateral,
-		debt,
-		maxBorrow,
-		liquidatable,
-		riskPrice,
-		liquidationPrice,
-	] = query.data ?? [];
+	// The pool's prices do not depend on the wallet, so read them even when disconnected.
+	const prices = useReadContracts({
+		contracts: [
+			{ ...pool, functionName: "riskPrice" },
+			{ ...pool, functionName: "liquidationPrice" },
+		],
+	});
+	const [collateral, debt, maxBorrow, liquidatable] = query.data ?? [];
+	const [riskPrice, liquidationPrice] = prices.data ?? [];
 	return {
 		...query,
 		collateral: collateral?.result as bigint | undefined,

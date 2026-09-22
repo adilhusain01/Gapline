@@ -256,11 +256,13 @@ function LendPage() {
 						<Row
 							label="Status"
 							value={
-								paused
-									? "paused"
-									: position.isLiquidatable
-										? "liquidatable"
-										: "healthy"
+								!isConnected
+									? "--"
+									: paused
+										? "paused"
+										: position.isLiquidatable
+											? "liquidatable"
+											: "healthy"
 							}
 						/>
 						<p className="text-xs text-muted-foreground">

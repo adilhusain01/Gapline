@@ -8,7 +8,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { bpsToPercent, countdown, percent, timeAgo, usd } from "@/lib/format";
-import { type MarketView, useSessionStatus } from "@/lib/gapline";
+import { type MarketView, useNextClose, useSessionStatus } from "@/lib/gapline";
 
 function Stat({
 	label,
@@ -30,6 +30,7 @@ function Stat({
 
 export function PricePanel({ active }: { active?: MarketView }) {
 	const status = useSessionStatus();
+	const nextClose = useNextClose();
 	const now = Math.floor(Date.now() / 1000);
 
 	if (status.isLoading || status.isOpen === undefined) {
@@ -100,8 +101,8 @@ export function PricePanel({ active }: { active?: MarketView }) {
 					label={status.isOpen ? "Session closes in" : "Session reopens in"}
 					value={
 						status.isOpen
-							? status.lastClose
-								? countdown(Number(status.nextOpen ?? 0n) - now)
+							? nextClose
+								? countdown(Number(nextClose) - now)
 								: "--"
 							: countdown(Number(status.nextOpen ?? 0n) - now)
 					}
