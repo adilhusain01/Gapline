@@ -1,0 +1,28 @@
+{
+  "name": "@gapline/agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx --env-file=../../.env src/index.ts",
+    "once": "tsx --env-file=../../.env src/index.ts --once",
+    "signal": "tsx --env-file=../../.env scripts/signal-check.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@gapline/abi": "^1.0.0",
+    "@stdlib/stats-base-dists-normal-cdf": "^0.3.1",
+    "viem": "^2.56.8",
+    "zod": "^4.6.5"
+  }
+}
