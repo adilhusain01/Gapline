@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { rangeLabel, usdg } from "@/lib/format";
+import { percent, rangeLabel, usdg } from "@/lib/format";
 import {
 	addresses,
 	chainId,
@@ -102,7 +102,9 @@ export function TradePanel({
 							: "Trade this range"}
 				</CardTitle>
 				<p className="text-sm text-muted-foreground">
-					{rangeLabel(market.edges, outcome)}
+					{market.resolved
+						? `Reopened ${percent((Number(market.settlePrice) / Number(market.refPrice) - 1) * 100, 2)}: winning range ${rangeLabel(market.edges, market.winner)}`
+						: rangeLabel(market.edges, outcome)}
 				</p>
 			</CardHeader>
 			<CardContent className="space-y-4">

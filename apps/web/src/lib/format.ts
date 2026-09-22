@@ -62,3 +62,15 @@ export function timeAgo(timestamp: bigint | number) {
 	);
 	return `${countdown(seconds)} ago`;
 }
+
+/** A timestamp in the market's own clock, e.g. "Fri 20:00 ET". */
+export function marketTime(timestamp: bigint | number) {
+	const text = new Date(Number(timestamp) * 1000).toLocaleString("en-US", {
+		timeZone: "America/New_York",
+		weekday: "short",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	});
+	return `${text} ET`;
+}

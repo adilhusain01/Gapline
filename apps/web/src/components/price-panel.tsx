@@ -7,7 +7,14 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { bpsToPercent, countdown, percent, timeAgo, usd } from "@/lib/format";
+import {
+	bpsToPercent,
+	countdown,
+	marketTime,
+	percent,
+	timeAgo,
+	usd,
+} from "@/lib/format";
 import { type MarketView, useNextClose, useSessionStatus } from "@/lib/gapline";
 
 function Stat({
@@ -109,7 +116,7 @@ export function PricePanel({ active }: { active?: MarketView }) {
 					hint={
 						status.isOpen
 							? "24/5 session, closes Friday 20:00 ET"
-							: `frozen since ${status.lastClose ? new Date(Number(status.lastClose) * 1000).toUTCString().slice(0, 22) : "--"}`
+							: `frozen since ${status.lastClose ? marketTime(status.lastClose) : "--"}`
 					}
 				/>
 			</CardContent>

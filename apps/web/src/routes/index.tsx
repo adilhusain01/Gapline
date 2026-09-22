@@ -75,7 +75,7 @@ function MarketPage() {
 								</p>
 							</div>
 							<div className="flex items-center gap-2">
-								{status.activeMarketId === selected.id ? (
+								{status.activeMarketId === selected.id && !selected.resolved ? (
 									<Badge
 										variant="outline"
 										className="border-amber-500/40 text-amber-600 dark:text-amber-400"

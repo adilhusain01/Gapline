@@ -4,6 +4,16 @@ import { Progress } from "@/components/ui/progress";
 import { rangeLabel, usd } from "@/lib/format";
 import type { MarketView } from "@/lib/gapline";
 
+/** Reopening prices a range covers, from Friday's close and the range's edges. */
+function priceSpan(market: MarketView, index: number) {
+	const at = (bps: bigint) =>
+		usd((market.refPrice * (10_000n + bps)) / 10_000n);
+	const { edges } = market;
+	if (index === 0) return `${at(edges[0])} or below`;
+	if (index === edges.length) return `${at(edges[edges.length - 1])} or above`;
+	return `${at(edges[index - 1])} - ${at(edges[index])}`;
+}
+
 /** The market's probability for each reopening range. */
 export function MarketRanges({
 	market,
@@ -43,25 +53,7 @@ export function MarketRanges({
 						</div>
 						<Progress value={pct} className="mt-2 h-1.5" />
 						<div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-							<span>
-								{usd(
-									(market.refPrice *
-										BigInt(
-											10_000 +
-												Number(
-													market.edges[
-														Math.min(index, market.edges.length - 1)
-													],
-												),
-										)) /
-										10_000n,
-								)}
-								{index === 0
-									? " or below"
-									: index === market.edges.length
-										? " or above"
-										: ""}
-							</span>
+							<span>{priceSpan(market, index)}</span>
 							{held > 0n ? (
 								<span>{Number(formatUnits(held, 18)).toFixed(2)} shares</span>
 							) : null}
