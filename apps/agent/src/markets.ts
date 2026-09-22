@@ -9,6 +9,7 @@ export type Market = {
   liquidity: bigint;
   boundariesBps: readonly bigint[];
   collateralHeld: bigint;
+  feesAccrued: bigint;
   resolved: boolean;
   winner: number;
 };
@@ -27,6 +28,7 @@ export async function recentMarkets(limit = 10): Promise<Market[]> {
     liquidity: m.liquidity,
     boundariesBps: m.boundariesBps,
     collateralHeld: m.collateralHeld,
+    feesAccrued: m.feesAccrued,
     resolved: m.resolved,
     winner: Number(m.winner),
   }));

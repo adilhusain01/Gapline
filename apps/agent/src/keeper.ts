@@ -56,6 +56,26 @@ async function pointOracle(markets: Market[]) {
   });
 }
 
+/** Has the lending pool buy this weekend's gap-down cover on the oracle's market, once per market. */
+async function hedgePool(markets: Market[]) {
+  const [active, hasActive, implied, totalDebt] = await Promise.all([
+    testnet.readContract({ ...contracts.oracle, functionName: "activeMarketId" }),
+    testnet.readContract({ ...contracts.oracle, functionName: "hasActiveMarket" }),
+    testnet.readContract({ ...contracts.oracle, functionName: "isImplied" }),
+    testnet.readContract({ ...contracts.pool, functionName: "totalDebt" }),
+  ]);
+  if (!hasActive || !implied || totalDebt === 0n) return;
+  const market = markets.find((m) => m.id === active);
+  if (!market || market.resolved) return;
+  const already = await testnet.readContract({ ...contracts.pool, functionName: "hedgeShares", args: [active] });
+  if (already > 0n) return;
+  await send(scope, `pool buys gap cover on #${active} (loans ${formatUnits(totalDebt, 6)} USDG)`, {
+    ...contracts.pool,
+    functionName: "hedge",
+    args: [active],
+  });
+}
+
 /** Settles markets after the reopen, then collects winnings and the maker's residual. */
 async function settleAndCollect(markets: Market[]) {
   for (const m of markets) {
@@ -81,6 +101,18 @@ async function settleAndCollect(markets: Market[]) {
       functionName: "balanceOf",
       args: [account.address, winningToken],
     });
+    const poolHeld = await testnet.readContract({
+      ...contracts.market,
+      functionName: "balanceOf",
+      args: [contracts.pool.address, winningToken],
+    });
+    if (poolHeld > 0n) {
+      await send(scope, `pool collects ${formatUnits(poolHeld, 18)} USDG of cover from #${m.id}`, {
+        ...contracts.pool,
+        functionName: "collectHedge",
+        args: [m.id],
+      });
+    }
     if (held > 0n) {
       await send(scope, `redeem ${formatUnits(held, 18)} winning shares of #${m.id}`, {
         ...contracts.market,
@@ -100,6 +132,13 @@ async function settleAndCollect(markets: Market[]) {
           args: [m.id],
         });
       }
+      if (fresh && fresh.feesAccrued > 0n) {
+        await send(scope, `claim ${formatUnits(fresh.feesAccrued, 6)} USDG of underwriter fees from #${m.id}`, {
+          ...contracts.market,
+          functionName: "claimFees",
+          args: [m.id],
+        });
+      }
     }
   }
 }
@@ -109,5 +148,6 @@ export async function keeperTick() {
   await openIfNeeded(markets);
   const refreshed = await recentMarkets();
   await pointOracle(refreshed);
+  await hedgePool(refreshed);
   await settleAndCollect(refreshed);
 }

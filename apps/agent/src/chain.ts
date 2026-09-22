@@ -1,6 +1,8 @@
 import {
   aggregatorV3InterfaceAbi,
   deployment,
+  gapGuardedLendingPoolAbi,
+  gapGuardedLendingPoolAddress,
   gapMarketAbi,
   gapMarketAddress,
   impliedPriceOracleAbi,
@@ -29,6 +31,7 @@ export const contracts = {
   feed: { address: mirroredFeedAddress[id], abi: mirroredFeedAbi },
   market: { address: gapMarketAddress[id], abi: gapMarketAbi },
   oracle: { address: impliedPriceOracleAddress[id], abi: impliedPriceOracleAbi },
+  pool: { address: gapGuardedLendingPoolAddress[id], abi: gapGuardedLendingPoolAbi },
   usdg: { address: deployment.usdg as `0x${string}`, abi: erc20Abi },
 } as const;
 
