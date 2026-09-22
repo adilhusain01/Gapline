@@ -175,6 +175,66 @@ contract GapGuardTest is Test {
         assertEq(mid, 175e8);
     }
 
+    function test_HedgeBuysCrashCoverWithinBudget() public {
+        uint256 id = openWeekendMarket(1_000e18);
+        uint256 reserves = usdg.balanceOf(address(pool));
+        (uint256 shares, uint256 premium) = pool.hedge(id);
+
+        uint256 budget = pool.totalDebt() * pool.HEDGE_BUDGET_BPS() / 10_000;
+        assertLe(premium, budget, "never spends more than 1% of debt");
+        assertEq(reserves - usdg.balanceOf(address(pool)), premium);
+        assertEq(gm.balanceOf(address(pool), gm.tokenId(id, 0)), shares);
+        // 10% of 8,000 USDG debt = 800 shares, halved once to fit the 80 USDG budget at b = 1000.
+        assertEq(shares, 400e18);
+        assertGt(gm.getMarket(id).feesAccrued, 0, "the underwriter earns the fee on the pool's premium");
+    }
+
+    function test_HedgeOncePerMarketOnActiveMarketOnly() public {
+        vm.warp(SAT_NOON);
+        vm.expectRevert(GapGuardedLendingPool.NotActiveMarket.selector);
+        pool.hedge(0);
+
+        uint256 id = openWeekendMarket(1_000e18);
+        vm.expectRevert(GapGuardedLendingPool.NotActiveMarket.selector);
+        pool.hedge(id + 1);
+
+        pool.hedge(id);
+        vm.expectRevert(GapGuardedLendingPool.AlreadyHedged.selector);
+        pool.hedge(id);
+    }
+
+    function test_NoDebtNothingToHedge() public {
+        vm.prank(borrower);
+        pool.repay(borrower, 8_000e6);
+        uint256 id = openWeekendMarket(1_000e18);
+        vm.expectRevert(GapGuardedLendingPool.NothingToHedge.selector);
+        pool.hedge(id);
+    }
+
+    function test_HedgePaysOutOnCrash() public {
+        uint256 id = openWeekendMarket(1_000e18);
+        (uint256 shares, uint256 premium) = pool.hedge(id);
+
+        vm.warp(SUN_REOPEN + 1 minutes);
+        feed.updateRoundData(2, REF * 92 / 100, SUN_REOPEN + 10, SUN_REOPEN + 10); // reopens -8%
+        gm.resolve(id, 2);
+
+        uint256 before = usdg.balanceOf(address(pool));
+        uint256 payout = pool.collectHedge(id);
+        assertEq(payout, shares / 1e12, "each winning share pays 1 USDG");
+        assertEq(usdg.balanceOf(address(pool)) - before, payout);
+        assertGt(payout, premium * 5, "cover pays several times its premium in a crash");
+    }
+
+    function test_HedgeExpiresWorthlessOnCalmWeekend() public {
+        uint256 id = openWeekendMarket(1_000e18);
+        pool.hedge(id);
+        vm.warp(SUN_REOPEN + 1 minutes);
+        feed.updateRoundData(2, REF, SUN_REOPEN + 10, SUN_REOPEN + 10); // flat reopen
+        gm.resolve(id, 2);
+        assertEq(pool.collectHedge(id), 0, "the premium was the cost of insurance");
+    }
+
     function test_ActiveMarketRules() public {
         uint256 shallowId;
         vm.warp(SAT_NOON);
