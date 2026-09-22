@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsx --env-file=../../.env src/index.ts",
     "once": "tsx --env-file=../../.env src/index.ts --once",
-    "signal": "tsx --env-file=../../.env scripts/signal-check.ts"
+    "signal": "tsx --env-file=../../.env scripts/signal-check.ts",
+    "backtest": "tsx --env-file=../../.env scripts/backtest.ts"
   },
   "keywords": [],
   "author": "",

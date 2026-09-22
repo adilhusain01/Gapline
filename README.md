@@ -41,7 +41,7 @@ flowchart LR
    A session runs from 20:00 ET on the previous day to 20:00 ET, so shifting Eastern time by four hours maps any
    instant to its trading day.
 2. **`GapMarket`** opens during a closure. It snapshots the last pre-close price and splits the reopening
-   move into ranges (`-5% or worse`, `-5% to -2%`, ... `+5% or better`). An LMSR market maker, seeded by the
+   move into ranges (`-3% or worse`, `-3% to -1%`, ... `+3% or better`). An LMSR market maker, seeded by the
    market's creator with its worst-case loss `b * ln(n)`, always quotes every range, and its prices are
    probabilities. Each winning share redeems for 1 USDG.
 3. **Settlement is permissionless.** Anyone passes the first feed round published at or after the reopen;
@@ -114,19 +114,36 @@ forge test --match-contract ForkedWeekend --fork-url robinhood_testnet   # full 
 - **Keeper.** When the session closes it opens the weekend market (seeded with `b * ln(7)` USDG) and points
   the oracle at the deepest market. After the reopen it waits for the first post-reopen feed round, settles,
   redeems winning shares and withdraws the maker's residual.
-- **Pricing agent.** Forms a belief about the reopening move and trades the market toward it:
-  - signal: Bitcoin's move since the stock session closed, read from Robinhood mainnet's Chainlink WBTC / USD
-    feed (crypto trades all weekend), times a configurable beta;
+- **Pricing agent.** Forecasts the reopening move and trades the market toward that forecast:
+  - **Uniswap TSLA/USDG** on Robinhood Chain mainnet (the $660K v3 pool), because the stock token keeps
+    trading while the stock does not. Depth-filtered: ignored below $100K of liquidity or more than 10% away
+    from Friday's close, which is what keeps a thin pool's fake print out;
+  - **the weekend BTC move** from Robinhood mainnet's Chainlink WBTC / USD feed, times a fitted beta of 0.35;
+  - the forecast is a 50/50 blend of the two, the combination with the lowest error in the backtest below;
   - optional Claude analyst: when `ANTHROPIC_API_KEY` is set, Claude Opus 5 searches weekend Tesla news and
-    returns a bounded drift with a confidence, which is blended into the mean;
-  - the belief is a normal distribution over the reopening move; for the range where belief and market
-    disagree most, it trades the LMSR shares that close part of the gap,
+    returns a bounded drift with a confidence, which is added to the mean;
+  - the belief is a normal distribution (sd 0.75%) over the reopening move; for the range where belief and
+    market disagree most, it trades the LMSR shares that close part of the gap,
     `delta = b * ln(t(1-p) / (p(1-t)))`;
   - hard limits: 5 USDG per trade, 25 USDG net per market, no short positions, simulate before sending.
 
-The beta (0.3) and gap volatility (2%) are configurable assumptions, not fitted parameters. The agent's job
-is to keep the market honest and liquid enough to be a price source; anyone with a better model can trade
-against it.
+### Backtest
+
+`npm run backtest -w @gapline/agent` replays every weekend closure in the mainnet RHTSLA/USD feed's history
+(13 since late June 2026) and reads the Uniswap pool's price from its swap logs. Full table in
+[`docs/backtest.md`](docs/backtest.md). On the 9 weekends with pool data:
+
+| Forecast of the reopening gap | Mean absolute error | RMS error |
+|---|---|---|
+| No change (what a frozen feed assumes) | 0.67 pp | 0.79 pp |
+| BTC move x 0.35 | 0.51 pp | 0.59 pp |
+| Uniswap TSLA/USDG, 1 h before reopen | 0.45 pp | 0.54 pp |
+| **Blend (the agent's forecast)** | **0.39 pp** | **0.51 pp** |
+
+The pool called the direction right on 6 of the 7 weekends with a gap of at least 0.25%. Actual gaps had an
+RMS of 0.80%, so the market's ranges are sized to match: `-3% or worse`, `-3% to -1%`, `-1% to -0.25%`,
+`-0.25% to +0.25%`, and the mirror images. Thirteen weekends is a small sample; the parameters are
+configurable and the table regenerates as weekends accumulate.
 
 ## Running it
 

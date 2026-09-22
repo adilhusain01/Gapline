@@ -26,10 +26,15 @@ async function btcPriceAt(timestamp: bigint) {
   return round(phase | lo);
 }
 
-/** BTC's move since the stock session closed, in percent. Crypto trades all weekend; stocks don't. */
-export async function weekendCryptoMovePct(closeTs: bigint) {
-  const [[, latest], atClose] = await Promise.all([
-    mainnet.readContract({ ...MAINNET_BTC_FEED, functionName: "latestRoundData" }),
+/**
+ * BTC's move since the stock session closed, in percent, up to `until` (default: now).
+ * Crypto trades all weekend; stocks don't.
+ */
+export async function weekendCryptoMovePct(closeTs: bigint, until?: bigint) {
+  const [latest, atClose] = await Promise.all([
+    until === undefined
+      ? mainnet.readContract({ ...MAINNET_BTC_FEED, functionName: "latestRoundData" }).then(([, answer]) => answer)
+      : btcPriceAt(until).then((round) => round.answer),
     btcPriceAt(closeTs),
   ]);
   if (atClose.answer <= 0n) return 0;

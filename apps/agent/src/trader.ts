@@ -9,6 +9,7 @@ import { account, contracts, log, now, testnet } from "./chain";
 import { config } from "./config";
 import { currentMarket } from "./keeper";
 import { recentMarkets } from "./markets";
+import { dexSignal } from "./dex";
 import { weekendCryptoMovePct } from "./signals";
 import { ensureAllowance, send } from "./tx";
 
@@ -40,13 +41,20 @@ export async function traderTick() {
     testnet.readContract({ ...contracts.market, functionName: "prices", args: [market.id] }),
     weekendCryptoMovePct(closeTs),
   ]);
-  const view = await analystView(Number(formatUnits(market.refPrice, 8)));
-  const belief = beliefFor(market.boundariesBps, cryptoMove, view?.drift_pct, view?.confidence);
+  const fridayClose = Number(formatUnits(market.refPrice, 8));
+  const [view, dex] = await Promise.all([
+    analystView(fridayClose),
+    dexSignal(fridayClose, config.minDexTvlUsd, config.maxDexDeviationPct).catch(() => undefined),
+  ]);
+  const dexGap = dex?.usable ? dex.gapPct : undefined;
+  const belief = beliefFor(market.boundariesBps, cryptoMove, dexGap, view?.drift_pct, view?.confidence);
   const prices = prices18.map((p) => Number(formatUnits(p, 18)));
 
   log(
     scope,
-    `#${market.id} BTC weekend ${cryptoMove.toFixed(2)}%${view ? `, analyst ${view.drift_pct.toFixed(2)}%` : ""} -> ` +
+    `#${market.id} BTC weekend ${cryptoMove.toFixed(2)}%, ` +
+      `DEX ${dex ? `$${dex.price.toFixed(2)} (${dex.gapPct.toFixed(2)}%, $${Math.round(dex.tvlUsd / 1000)}K${dex.usable ? "" : ", ignored"})` : "unavailable"}` +
+      `${view ? `, analyst ${view.drift_pct.toFixed(2)}%` : ""} -> ` +
       `belief mean ${belief.meanPct.toFixed(2)}% sd ${belief.sigmaPct}% | market [${prices.map(pct).join(" ")}] ` +
       `belief [${belief.probabilities.map(pct).join(" ")}]`,
   );
