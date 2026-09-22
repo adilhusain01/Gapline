@@ -1,0 +1,26 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+contracts/out/
+contracts/cache/
+
+# Foundry dry runs (real broadcasts in contracts/broadcast are kept as deployment records)
+contracts/broadcast/**/dry-run/
+
+# Runtime logs and agent state
+logs/
+
+# OS and editor files
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea/
