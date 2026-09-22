@@ -19,7 +19,8 @@ import {MarketCalendar} from "./MarketCalendar.sol";
 /// For each closure, a market splits the reopening move into ranges of basis points. Traders
 /// buy and sell range shares from an LMSR market maker; each winning share redeems 1 unit of
 /// collateral (USDG). Settlement is permissionless: the first feed round published after the
-/// session reopens decides the winning range.
+/// session reopens decides the winning range. Every trade pays a fee to the market's creator, the
+/// underwriter who seeded the market maker, so funding a market has positive expected value.
 contract GapMarket is ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
@@ -30,11 +31,14 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
     int256 private constant BPS = 10_000;
     /// @dev A settlement round must land within this window after the reopen.
     uint256 public constant MAX_SETTLE_DELAY = 6 hours;
+    uint256 public constant MAX_FEE_BPS = 500;
 
     IERC20 public immutable collateral;
     MarketCalendar public immutable calendar;
     /// @dev Converts 18-decimal share/cost units into collateral units.
     uint256 private immutable scale;
+    /// @notice Trading fee in basis points, charged on the collateral amount of every buy and sell.
+    uint256 public immutable feeBps;
 
     struct Market {
         AggregatorV3Interface feed;
@@ -48,6 +52,8 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         int256[] boundariesBps;
         int256[] shares;
         uint256 collateralHeld;
+        /// @dev Fees owed to the creator; kept apart from collateralHeld, which backs winning shares.
+        uint256 feesAccrued;
         bool resolved;
         uint8 winner;
         int256 settlePrice;
@@ -58,7 +64,10 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
     event MarketCreated(
         uint256 indexed marketId, address indexed feed, int256 refPrice, uint64 closeTs, uint64 reopenTs, int256[] boundariesBps
     );
-    event Traded(uint256 indexed marketId, address indexed trader, uint8 outcome, int256 shareDelta, uint256 collateralAmount);
+    event Traded(
+        uint256 indexed marketId, address indexed trader, uint8 outcome, int256 shareDelta, uint256 collateralAmount, uint256 fee
+    );
+    event FeesClaimed(uint256 indexed marketId, uint256 amount);
     event Resolved(uint256 indexed marketId, uint80 roundId, int256 settlePrice, int256 moveBps, uint8 winner);
     event Redeemed(uint256 indexed marketId, address indexed holder, uint256 shares, uint256 payout);
     event ResidualWithdrawn(uint256 indexed marketId, uint256 amount);
@@ -76,10 +85,13 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
     error NotFirstRoundAfterReopen();
     error BadPrice();
     error NotCreator();
+    error FeeTooHigh();
 
-    constructor(IERC20 collateral_, MarketCalendar calendar_) ERC1155("") {
+    constructor(IERC20 collateral_, MarketCalendar calendar_, uint256 feeBps_) ERC1155("") {
+        if (feeBps_ > MAX_FEE_BPS) revert FeeTooHigh();
         collateral = collateral_;
         calendar = calendar_;
+        feeBps = feeBps_;
         scale = 10 ** (18 - IERC20Metadata(address(collateral_)).decimals());
     }
 
@@ -129,36 +141,42 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         emit MarketCreated(marketId, address(feed), answer, m.closeTs, m.reopenTs, boundariesBps);
     }
 
-    /// @notice Buy `shares` (18 decimals) of range `outcome`, paying at most `maxCost` collateral.
+    /// @notice Buy `shares` (18 decimals) of range `outcome`, paying at most `maxCost` collateral, fee included.
     function buy(uint256 marketId, uint8 outcome, uint256 shares, uint256 maxCost)
         external
         nonReentrant
         returns (uint256 cost)
     {
         Market storage m = _tradable(marketId, outcome);
-        cost = _toCollateralUp(_costDelta(m, outcome, shares.toInt256()).toUint256());
+        uint256 base = _toCollateralUp(_costDelta(m, outcome, shares.toInt256()).toUint256());
+        uint256 fee = _fee(base);
+        cost = base + fee;
         if (cost > maxCost) revert Slippage();
         m.shares[outcome] += shares.toInt256();
-        m.collateralHeld += cost;
+        m.collateralHeld += base;
+        m.feesAccrued += fee;
         collateral.safeTransferFrom(msg.sender, address(this), cost);
         _mint(msg.sender, tokenId(marketId, outcome), shares, "");
-        emit Traded(marketId, msg.sender, outcome, shares.toInt256(), cost);
+        emit Traded(marketId, msg.sender, outcome, shares.toInt256(), cost, fee);
     }
 
-    /// @notice Sell `shares` of range `outcome` back to the market maker for at least `minReturn`.
+    /// @notice Sell `shares` of range `outcome` back to the market maker for at least `minReturn`, fee deducted.
     function sell(uint256 marketId, uint8 outcome, uint256 shares, uint256 minReturn)
         external
         nonReentrant
         returns (uint256 proceeds)
     {
         Market storage m = _tradable(marketId, outcome);
-        proceeds = _toCollateralDown((-_costDelta(m, outcome, -shares.toInt256())).toUint256());
+        uint256 gross = _toCollateralDown((-_costDelta(m, outcome, -shares.toInt256())).toUint256());
+        uint256 fee = _fee(gross);
+        proceeds = gross - fee;
         if (proceeds < minReturn) revert Slippage();
         _burn(msg.sender, tokenId(marketId, outcome), shares);
         m.shares[outcome] -= shares.toInt256();
-        m.collateralHeld -= proceeds;
+        m.collateralHeld -= gross;
+        m.feesAccrued += fee;
         collateral.safeTransfer(msg.sender, proceeds);
-        emit Traded(marketId, msg.sender, outcome, -shares.toInt256(), proceeds);
+        emit Traded(marketId, msg.sender, outcome, -shares.toInt256(), proceeds, fee);
     }
 
     /// @notice Settle using the first feed round published at or after the reopen.
@@ -204,6 +222,16 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         emit Redeemed(marketId, msg.sender, shares, payout);
     }
 
+    /// @notice The creator can claim trading fees at any time; they never back winning shares.
+    function claimFees(uint256 marketId) external nonReentrant returns (uint256 amount) {
+        Market storage m = markets[marketId];
+        if (msg.sender != m.creator) revert NotCreator();
+        amount = m.feesAccrued;
+        m.feesAccrued = 0;
+        collateral.safeTransfer(msg.sender, amount);
+        emit FeesClaimed(marketId, amount);
+    }
+
     /// @notice After settlement the market maker's creator takes back whatever is not owed to winners.
     function withdrawResidual(uint256 marketId) external nonReentrant returns (uint256 amount) {
         Market storage m = markets[marketId];
@@ -230,12 +258,16 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         return markets[marketId];
     }
 
+    /// @notice All-in cost of buying `shares`, fee included.
     function quoteBuy(uint256 marketId, uint8 outcome, uint256 shares) external view returns (uint256) {
-        return _toCollateralUp(_costDelta(markets[marketId], outcome, shares.toInt256()).toUint256());
+        uint256 base = _toCollateralUp(_costDelta(markets[marketId], outcome, shares.toInt256()).toUint256());
+        return base + _fee(base);
     }
 
+    /// @notice Net proceeds of selling `shares`, fee deducted.
     function quoteSell(uint256 marketId, uint8 outcome, uint256 shares) external view returns (uint256) {
-        return _toCollateralDown((-_costDelta(markets[marketId], outcome, -shares.toInt256())).toUint256());
+        uint256 gross = _toCollateralDown((-_costDelta(markets[marketId], outcome, -shares.toInt256())).toUint256());
+        return gross - _fee(gross);
     }
 
     /// @notice LMSR prices, i.e. the market's probability for each range (18 decimals, sums to 1e18).
@@ -316,6 +348,10 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         for (uint256 i = 1; i < q.length; ++i) {
             if (q[i] > r) r = q[i];
         }
+    }
+
+    function _fee(uint256 amount) internal view returns (uint256) {
+        return Math.mulDiv(amount, feeBps, 10_000, Math.Rounding.Ceil);
     }
 
     function _toCollateralUp(uint256 amount18) internal view returns (uint256) {

@@ -24,6 +24,8 @@ contract Deploy is Script {
         address stock = vm.envOr("STOCK", TESTNET_TSLA);
         // Minimum LMSR depth for a market to drive the oracle; sized for faucet USDG on testnet.
         uint256 minLiquidity = vm.envOr("MIN_LIQUIDITY", uint256(10e18));
+        // Trading fee paid to each market's underwriter (its creator), in basis points.
+        uint256 feeBps = vm.envOr("FEE_BPS", uint256(100));
 
         vm.startBroadcast();
         address deployer = msg.sender;
@@ -33,7 +35,7 @@ contract Deploy is Script {
         _setHolidays(calendar);
 
         MirroredFeed feed = new MirroredFeed(relayer, 8, "RHTSLA / USD (mainnet mirror)");
-        GapMarket gapMarket = new GapMarket(IERC20(usdg), calendar);
+        GapMarket gapMarket = new GapMarket(IERC20(usdg), calendar, feeBps);
         ImpliedPriceOracle oracle = new ImpliedPriceOracle(
             AggregatorV3Interface(address(feed)),
             gapMarket,

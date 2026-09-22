@@ -25,12 +25,13 @@ contract GapMarketTest is Test {
     uint256 constant SUN_REOPEN = FRI_CLOSE + 2 days; // 2026-09-21 00:00 UTC = Sun 20:00 EDT
     int256 constant REF = 180e8; // NVDA $180, 8 decimals like the Robinhood feeds
     uint256 constant B = 1_000e18; // LMSR liquidity
+    uint256 constant FEE_BPS = 100; // 1% to the underwriter
 
     function setUp() public {
         assertEq(FRI_CLOSE, DT.timestampFromDateTime(2026, 9, 19, 0, 0, 0));
         cal = new MarketCalendar(address(this));
         usdg = new MockUSDG();
-        gm = new GapMarket(usdg, cal);
+        gm = new GapMarket(usdg, cal, FEE_BPS);
         feed = new MockV3Aggregator(8, REF);
         feed.updateRoundData(1, REF, FRI_CLOSE - 1 minutes, FRI_CLOSE - 1 minutes);
 
@@ -101,14 +102,49 @@ contract GapMarketTest is Test {
         assertLt(mean, 0, "buying the crash range should drag the implied move down");
     }
 
-    function test_BuyThenSellIsPathIndependent() public {
+    function test_RoundTripCostsOnlyFees() public {
         uint256 id = create();
         vm.startPrank(alice);
         uint256 cost = gm.buy(id, 3, 200e18, type(uint256).max);
         uint256 back = gm.sell(id, 3, 200e18, 0);
         vm.stopPrank();
         assertLe(back, cost, "never profit from a round trip");
-        assertLe(cost - back, 1, "only rounding is lost");
+        uint256 fees = gm.getMarket(id).feesAccrued;
+        assertApproxEqAbs(cost - back, fees, 2, "LMSR is path independent; only fees and rounding are lost");
+        assertApproxEqRel(fees, cost * 2 * FEE_BPS / 10_000, 0.01e18, "about 1% on each leg");
+    }
+
+    function test_QuotesIncludeFee() public {
+        uint256 id = create();
+        uint256 quotedBuy = gm.quoteBuy(id, 1, 50e18);
+        vm.prank(alice);
+        assertEq(gm.buy(id, 1, 50e18, quotedBuy), quotedBuy);
+        uint256 quotedSell = gm.quoteSell(id, 1, 20e18);
+        vm.prank(alice);
+        assertEq(gm.sell(id, 1, 20e18, quotedSell), quotedSell);
+    }
+
+    function test_FeesGoToCreatorAnytime() public {
+        uint256 id = create();
+        vm.prank(alice);
+        gm.buy(id, 2, 300e18, type(uint256).max);
+        uint256 fees = gm.getMarket(id).feesAccrued;
+        assertGt(fees, 0);
+
+        vm.prank(alice);
+        vm.expectRevert(GapMarket.NotCreator.selector);
+        gm.claimFees(id);
+
+        uint256 before = usdg.balanceOf(maker);
+        vm.prank(maker);
+        assertEq(gm.claimFees(id), fees);
+        assertEq(usdg.balanceOf(maker) - before, fees);
+        assertEq(gm.getMarket(id).feesAccrued, 0);
+    }
+
+    function test_FeeIsCapped() public {
+        vm.expectRevert(GapMarket.FeeTooHigh.selector);
+        new GapMarket(usdg, cal, 501);
     }
 
     function test_SlippageProtection() public {
@@ -145,8 +181,10 @@ contract GapMarketTest is Test {
         vm.prank(bob);
         assertEq(gm.redeem(id), 0, "losers get nothing");
 
-        vm.prank(maker);
+        vm.startPrank(maker);
         gm.withdrawResidual(id);
+        gm.claimFees(id);
+        vm.stopPrank();
         assertEq(usdg.balanceOf(address(gm)), 0, "every unit accounted for");
     }
 
@@ -209,10 +247,12 @@ contract GapMarketTest is Test {
         gm.redeem(id);
         vm.prank(bob);
         gm.redeem(id);
-        vm.prank(maker);
+        vm.startPrank(maker);
         gm.withdrawResidual(id);
+        gm.claimFees(id);
+        vm.stopPrank();
         // Nothing owed is left and nothing is missing.
         assertEq(gm.totalSupply(gm.tokenId(id, gm.getMarket(id).winner)), 0);
-        assertEq(usdg.balanceOf(address(gm)), gm.getMarket(id).collateralHeld);
+        assertEq(usdg.balanceOf(address(gm)), gm.getMarket(id).collateralHeld + gm.getMarket(id).feesAccrued);
     }
 }

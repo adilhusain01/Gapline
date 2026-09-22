@@ -37,7 +37,7 @@ contract GapGuardTest is Test {
         cal = new MarketCalendar(address(this));
         usdg = new MockUSDG();
         nvda = new MockStock("NVIDIA", "NVDA");
-        gm = new GapMarket(usdg, cal);
+        gm = new GapMarket(usdg, cal, 100);
         feed = new MockV3Aggregator(8, REF);
         oracle = new ImpliedPriceOracle(AggregatorV3Interface(address(feed)), gm, 1 days, 500e18, 2);
         pool = new GapGuardedLendingPool(nvda, usdg, oracle);
