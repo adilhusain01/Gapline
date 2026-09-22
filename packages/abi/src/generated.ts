@@ -83,6 +83,20 @@ export const gapGuardedLendingPoolAbi = [
   {
     type: 'function',
     inputs: [],
+    name: 'HEDGE_BUDGET_BPS',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'HEDGE_COVER_BPS',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
     name: 'LIQUIDATION_BONUS_BPS',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
@@ -117,6 +131,13 @@ export const gapGuardedLendingPoolAbi = [
   },
   {
     type: 'function',
+    inputs: [{ name: 'marketId', internalType: 'uint256', type: 'uint256' }],
+    name: 'collectHedge',
+    outputs: [{ name: 'payout', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
     inputs: [{ name: '', internalType: 'address', type: 'address' }],
     name: 'debtOf',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
@@ -128,6 +149,39 @@ export const gapGuardedLendingPoolAbi = [
     name: 'deposit',
     outputs: [],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'gapMarket',
+    outputs: [
+      { name: '', internalType: 'contract GapMarket', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'marketId', internalType: 'uint256', type: 'uint256' }],
+    name: 'hedge',
+    outputs: [
+      { name: 'shares', internalType: 'uint256', type: 'uint256' },
+      { name: 'premium', internalType: 'uint256', type: 'uint256' },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'marketId', internalType: 'uint256', type: 'uint256' }],
+    name: 'hedgePremium',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'marketId', internalType: 'uint256', type: 'uint256' }],
+    name: 'hedgeShares',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -159,6 +213,32 @@ export const gapGuardedLendingPoolAbi = [
     name: 'maxBorrow',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'uint256[]', type: 'uint256[]' },
+      { name: '', internalType: 'uint256[]', type: 'uint256[]' },
+      { name: '', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'onERC1155BatchReceived',
+    outputs: [{ name: '', internalType: 'bytes4', type: 'bytes4' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'uint256', type: 'uint256' },
+      { name: '', internalType: 'uint256', type: 'uint256' },
+      { name: '', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'onERC1155Received',
+    outputs: [{ name: '', internalType: 'bytes4', type: 'bytes4' }],
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -195,6 +275,20 @@ export const gapGuardedLendingPoolAbi = [
     inputs: [],
     name: 'stock',
     outputs: [{ name: '', internalType: 'contract IERC20', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'interfaceId', internalType: 'bytes4', type: 'bytes4' }],
+    name: 'supportsInterface',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'totalDebt',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
   },
   {
@@ -238,6 +332,56 @@ export const gapGuardedLendingPoolAbi = [
       },
     ],
     name: 'Deposited',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      {
+        name: 'payout',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'HedgeCollected',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      {
+        name: 'shares',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'premium',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+      {
+        name: 'debtCovered',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'Hedged',
   },
   {
     type: 'event',
@@ -305,9 +449,12 @@ export const gapGuardedLendingPoolAbi = [
     ],
     name: 'Withdrawn',
   },
+  { type: 'error', inputs: [], name: 'AlreadyHedged' },
   { type: 'error', inputs: [], name: 'ExceedsLtv' },
   { type: 'error', inputs: [], name: 'Healthy' },
   { type: 'error', inputs: [], name: 'InsufficientLiquidity' },
+  { type: 'error', inputs: [], name: 'NotActiveMarket' },
+  { type: 'error', inputs: [], name: 'NothingToHedge' },
   { type: 'error', inputs: [], name: 'PricingPaused' },
   { type: 'error', inputs: [], name: 'ReentrancyGuardReentrantCall' },
   {
@@ -349,8 +496,16 @@ export const gapMarketAbi = [
         internalType: 'contract MarketCalendar',
         type: 'address',
       },
+      { name: 'feeBps_', internalType: 'uint256', type: 'uint256' },
     ],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'MAX_FEE_BPS',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -416,6 +571,13 @@ export const gapMarketAbi = [
   },
   {
     type: 'function',
+    inputs: [{ name: 'marketId', internalType: 'uint256', type: 'uint256' }],
+    name: 'claimFees',
+    outputs: [{ name: 'amount', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
     inputs: [],
     name: 'collateral',
     outputs: [{ name: '', internalType: 'contract IERC20', type: 'address' }],
@@ -446,6 +608,13 @@ export const gapMarketAbi = [
   },
   {
     type: 'function',
+    inputs: [],
+    name: 'feeBps',
+    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [{ name: 'marketId', internalType: 'uint256', type: 'uint256' }],
     name: 'getMarket',
     outputs: [
@@ -468,6 +637,7 @@ export const gapMarketAbi = [
           { name: 'boundariesBps', internalType: 'int256[]', type: 'int256[]' },
           { name: 'shares', internalType: 'int256[]', type: 'int256[]' },
           { name: 'collateralHeld', internalType: 'uint256', type: 'uint256' },
+          { name: 'feesAccrued', internalType: 'uint256', type: 'uint256' },
           { name: 'resolved', internalType: 'bool', type: 'bool' },
           { name: 'winner', internalType: 'uint8', type: 'uint8' },
           { name: 'settlePrice', internalType: 'int256', type: 'int256' },
@@ -672,6 +842,25 @@ export const gapMarketAbi = [
         type: 'uint256',
         indexed: true,
       },
+      {
+        name: 'amount',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: false,
+      },
+    ],
+    name: 'FeesClaimed',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'marketId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
       { name: 'feed', internalType: 'address', type: 'address', indexed: true },
       {
         name: 'refPrice',
@@ -811,6 +1000,7 @@ export const gapMarketAbi = [
         type: 'uint256',
         indexed: false,
       },
+      { name: 'fee', internalType: 'uint256', type: 'uint256', indexed: false },
     ],
     name: 'Traded',
   },
@@ -923,6 +1113,7 @@ export const gapMarketAbi = [
     ],
     name: 'ERC1155MissingApprovalForAll',
   },
+  { type: 'error', inputs: [], name: 'FeeTooHigh' },
   { type: 'error', inputs: [], name: 'MarketIsOpen' },
   { type: 'error', inputs: [], name: 'NotCreator' },
   { type: 'error', inputs: [], name: 'NotFirstRoundAfterReopen' },
