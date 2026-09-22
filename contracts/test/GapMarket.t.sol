@@ -8,6 +8,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 
 import {MarketCalendar} from "../src/MarketCalendar.sol";
 import {GapMarket} from "../src/GapMarket.sol";
+import {LmsrMathSol} from "../src/LmsrMathSol.sol";
 import {MockUSDG} from "./mocks/MockUSDG.sol";
 
 contract GapMarketTest is Test {
@@ -31,7 +32,7 @@ contract GapMarketTest is Test {
         assertEq(FRI_CLOSE, DT.timestampFromDateTime(2026, 9, 19, 0, 0, 0));
         cal = new MarketCalendar(address(this));
         usdg = new MockUSDG();
-        gm = new GapMarket(usdg, cal, FEE_BPS);
+        gm = new GapMarket(usdg, cal, new LmsrMathSol(), FEE_BPS);
         feed = new MockV3Aggregator(8, REF);
         feed.updateRoundData(1, REF, FRI_CLOSE - 1 minutes, FRI_CLOSE - 1 minutes);
 
@@ -143,8 +144,9 @@ contract GapMarketTest is Test {
     }
 
     function test_FeeIsCapped() public {
+        LmsrMathSol math = new LmsrMathSol();
         vm.expectRevert(GapMarket.FeeTooHigh.selector);
-        new GapMarket(usdg, cal, 501);
+        new GapMarket(usdg, cal, math, 501);
     }
 
     function test_SlippageProtection() public {

@@ -10,11 +10,14 @@ import {MirroredFeed} from "../src/MirroredFeed.sol";
 import {GapMarket} from "../src/GapMarket.sol";
 import {ImpliedPriceOracle} from "../src/ImpliedPriceOracle.sol";
 import {GapGuardedLendingPool} from "../src/GapGuardedLendingPool.sol";
+import {LmsrMathSol} from "../src/LmsrMathSol.sol";
 
 /// @notice End-to-end rehearsal against the contracts actually deployed on Robinhood Chain testnet.
 /// Forks the live chain, moves to the coming weekend, and plays out a full closure: the feed freezes,
 /// a market opens, traders price the reopen, lending follows the band, and the market settles.
 /// Run with: forge test --match-contract ForkedWeekend --fork-url robinhood_testnet
+/// STOCK=AMZN rehearses the second stock. Local forks cannot execute Stylus WASM, so the Solidity reference
+/// LmsrMathSol (bit-identical to the Stylus program) is etched at the LmsrMath address for the fork.
 contract ForkedWeekendTest is Test {
     using stdJson for string;
 
@@ -35,14 +38,21 @@ contract ForkedWeekendTest is Test {
         // Only meaningful against a fork of the live testnet.
         vm.skip(block.chainid != 46630);
         string memory json = vm.readFile("./deployments/46630.json");
+        string memory stock = string.concat(".stocks.", vm.envOr("STOCK", string("TSLA")));
         cal = MarketCalendar(json.readAddress(".calendar"));
-        feed = MirroredFeed(json.readAddress(".feed"));
+        feed = MirroredFeed(json.readAddress(string.concat(stock, ".feed")));
         gm = GapMarket(json.readAddress(".gapMarket"));
-        oracle = ImpliedPriceOracle(json.readAddress(".oracle"));
-        pool = GapGuardedLendingPool(json.readAddress(".lendingPool"));
+        oracle = ImpliedPriceOracle(json.readAddress(string.concat(stock, ".oracle")));
+        pool = GapGuardedLendingPool(json.readAddress(string.concat(stock, ".lendingPool")));
         usdg = IERC20(json.readAddress(".usdg"));
-        tsla = IERC20(json.readAddress(".stock"));
+        tsla = IERC20(json.readAddress(string.concat(stock, ".token")));
         relayer = feed.owner();
+
+        // Stylus programs start with the 0xEFF000 prefix; the fork's EVM cannot run them.
+        bytes memory code = address(gm.math()).code;
+        if (code.length > 3 && code[0] == 0xEF && code[1] == 0xF0 && code[2] == 0x00) {
+            vm.etch(address(gm.math()), type(LmsrMathSol).runtimeCode);
+        }
 
         deal(address(usdg), maker, 5_000e6);
         deal(address(usdg), bear, 5_000e6);

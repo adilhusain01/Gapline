@@ -7,6 +7,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 
 import {MarketCalendar} from "../src/MarketCalendar.sol";
 import {GapMarket} from "../src/GapMarket.sol";
+import {LmsrMathSol} from "../src/LmsrMathSol.sol";
 import {ImpliedPriceOracle} from "../src/ImpliedPriceOracle.sol";
 import {GapGuardedLendingPool} from "../src/GapGuardedLendingPool.sol";
 import {MockUSDG} from "./mocks/MockUSDG.sol";
@@ -37,7 +38,7 @@ contract GapGuardTest is Test {
         cal = new MarketCalendar(address(this));
         usdg = new MockUSDG();
         nvda = new MockStock("NVIDIA", "NVDA");
-        gm = new GapMarket(usdg, cal, 100);
+        gm = new GapMarket(usdg, cal, new LmsrMathSol(), 100);
         feed = new MockV3Aggregator(8, REF);
         oracle = new ImpliedPriceOracle(AggregatorV3Interface(address(feed)), gm, 1 days, 500e18, 2);
         pool = new GapGuardedLendingPool(nvda, usdg, oracle);

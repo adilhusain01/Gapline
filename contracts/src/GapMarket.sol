@@ -10,8 +10,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {SD59x18, sd, exp, ln} from "@prb/math/SD59x18.sol";
 
+import {ILmsrMath} from "./ILmsrMath.sol";
 import {MarketCalendar} from "./MarketCalendar.sol";
 
 /// @title GapMarket
@@ -21,6 +21,8 @@ import {MarketCalendar} from "./MarketCalendar.sol";
 /// collateral (USDG). Settlement is permissionless: the first feed round published after the
 /// session reopens decides the winning range. Every trade pays a fee to the market's creator, the
 /// underwriter who seeded the market maker, so funding a market has positive expected value.
+/// The LMSR pricing math lives in a separate ILmsrMath contract: on Robinhood Chain an Arbitrum Stylus (Rust)
+/// program, in tests the Solidity reference LmsrMathSol; both are exact ports of PRBMath.
 contract GapMarket is ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
@@ -35,6 +37,8 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
 
     IERC20 public immutable collateral;
     MarketCalendar public immutable calendar;
+    /// @notice LMSR cost and price engine (Stylus on testnet, LmsrMathSol in tests).
+    ILmsrMath public immutable math;
     /// @dev Converts 18-decimal share/cost units into collateral units.
     uint256 private immutable scale;
     /// @notice Trading fee in basis points, charged on the collateral amount of every buy and sell.
@@ -87,10 +91,11 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
     error NotCreator();
     error FeeTooHigh();
 
-    constructor(IERC20 collateral_, MarketCalendar calendar_, uint256 feeBps_) ERC1155("") {
+    constructor(IERC20 collateral_, MarketCalendar calendar_, ILmsrMath math_, uint256 feeBps_) ERC1155("") {
         if (feeBps_ > MAX_FEE_BPS) revert FeeTooHigh();
         collateral = collateral_;
         calendar = calendar_;
+        math = math_;
         feeBps = feeBps_;
         scale = 10 ** (18 - IERC20Metadata(address(collateral_)).decimals());
     }
@@ -133,8 +138,8 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         m.boundariesBps = boundariesBps;
         m.shares = new int256[](n);
 
-        // Worst-case subsidy of an LMSR maker starting from zero shares: b * ln(n).
-        uint256 subsidy = _toCollateralUp((sd(m.liquidity).mul(ln(sd(int256(n) * 1e18)))).unwrap().toUint256());
+        // Worst-case subsidy of an LMSR maker starting from zero shares: C(0) = b * ln(n).
+        uint256 subsidy = _toCollateralUp(math.cost(m.liquidity, m.shares).toUint256());
         m.collateralHeld = subsidy;
         collateral.safeTransferFrom(msg.sender, address(this), subsidy);
 
@@ -270,15 +275,10 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         return gross - _fee(gross);
     }
 
-    /// @notice LMSR prices, i.e. the market's probability for each range (18 decimals, sums to 1e18).
-    function prices(uint256 marketId) public view returns (uint256[] memory p) {
+    /// @notice LMSR prices, i.e. the market's probability for each range (18 decimals, sums to ~1e18).
+    function prices(uint256 marketId) public view returns (uint256[] memory) {
         Market storage m = markets[marketId];
-        uint256 n = m.shares.length;
-        (SD59x18[] memory w, SD59x18 total) = _weights(m, m.shares);
-        p = new uint256[](n);
-        for (uint256 i; i < n; ++i) {
-            p[i] = w[i].div(total).unwrap().toUint256();
-        }
+        return math.prices(m.liquidity, m.shares);
     }
 
     /// @notice Probability-weighted reopening move and its spread, in basis points.
@@ -307,32 +307,7 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
     /// @dev C(q + delta * e_outcome) - C(q), 18 decimals. Positive for buys, negative for sells.
     function _costDelta(Market storage m, uint8 outcome, int256 delta) internal view returns (int256) {
         if (outcome >= m.shares.length) revert BadOutcome();
-        int256[] memory q = m.shares;
-        int256 before = _cost(m, q);
-        q[outcome] += delta;
-        return _cost(m, q) - before;
-    }
-
-    /// @dev LMSR cost b * ln(sum exp(q_i / b)), computed as max + b * ln(sum exp((q_i - max) / b))
-    /// so every exponent is <= 0 and cannot overflow.
-    function _cost(Market storage m, int256[] memory q) internal view returns (int256) {
-        (, SD59x18 total) = _weights(m, q);
-        int256 qMax = _max(q);
-        return qMax + sd(m.liquidity).mul(ln(total)).unwrap();
-    }
-
-    function _weights(Market storage m, int256[] memory q)
-        internal
-        view
-        returns (SD59x18[] memory w, SD59x18 total)
-    {
-        int256 qMax = _max(q);
-        SD59x18 b = sd(m.liquidity);
-        w = new SD59x18[](q.length);
-        for (uint256 i; i < q.length; ++i) {
-            w[i] = exp(sd(q[i] - qMax).div(b));
-            total = total.add(w[i]);
-        }
+        return math.costDelta(m.liquidity, m.shares, outcome, delta);
     }
 
     /// @dev Midpoint of range i; the open-ended tails sit tailWidthBps beyond the outer edges.
@@ -341,13 +316,6 @@ contract GapMarket is ERC1155Supply, ReentrancyGuard {
         if (i == 0) return e[0] - m.tailWidthBps;
         if (i == e.length) return e[e.length - 1] + m.tailWidthBps;
         return (e[i - 1] + e[i]) / 2;
-    }
-
-    function _max(int256[] memory q) internal pure returns (int256 r) {
-        r = q[0];
-        for (uint256 i = 1; i < q.length; ++i) {
-            if (q[i] > r) r = q[i];
-        }
     }
 
     function _fee(uint256 amount) internal view returns (uint256) {
