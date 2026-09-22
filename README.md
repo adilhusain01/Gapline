@@ -84,6 +84,9 @@ apps/relayer        copies mainnet Chainlink rounds to the testnet MirroredFeed
 apps/agent          keeper + pricing agent (opens, prices, settles and collects each weekend)
 apps/web            TanStack Router + Query, wagmi, shadcn/ui, zustand
 ecosystem.config.cjs  pm2 processes for the relayer, agent and web app
+docs/DEMO.md        weekend runbook, recording plan, pitch and submission text
+docs/knowledge-graph.md   components, addresses, measured facts and decisions (source: knowledge-graph.json)
+AGENTS.md / CLAUDE.md     instructions for coding agents working in this repo
 ```
 
 ## Tests

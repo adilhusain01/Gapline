@@ -8,7 +8,8 @@
   ],
   "scripts": {
     "abi": "npm run generate -w @gapline/abi",
-    "relayer": "npm run start -w @gapline/relayer"
+    "relayer": "npm run start -w @gapline/relayer",
+    "kg": "node scripts/knowledge-graph.mjs"
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
