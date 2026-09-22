@@ -1,11 +1,16 @@
 import { formatUnits } from "viem";
 
-import { account, contracts, log, testnet } from "./chain";
+import { account, contracts, log, syncClock, testnet } from "./chain";
 import { config } from "./config";
 import { keeperTick } from "./keeper";
 import { traderTick } from "./trader";
 
 async function tick() {
+  try {
+    await syncClock();
+  } catch (error) {
+    log("agent", `clock sync failed, using local time: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+  }
   try {
     await keeperTick();
   } catch (error) {
