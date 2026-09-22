@@ -43,7 +43,9 @@ flowchart LR
 2. **`GapMarket`** opens during a closure. It snapshots the last pre-close price and splits the reopening
    move into ranges (`-3% or worse`, `-3% to -1%`, ... `+3% or better`). An LMSR market maker, seeded by the
    market's creator with its worst-case loss `b * ln(n)`, always quotes every range, and its prices are
-   probabilities. Each winning share redeems for 1 USDG.
+   probabilities. Each winning share redeems for 1 USDG. Every trade pays a 1% fee to the creator, the
+   underwriter, so funding a market has positive expected value; fees are kept apart from the collateral that
+   backs winning shares.
 3. **Settlement is permissionless.** Anyone passes the first feed round published at or after the reopen;
    the contract checks the round before it was published earlier, so a later, friendlier round cannot be
    cherry-picked.
@@ -55,18 +57,23 @@ flowchart LR
    the band's **low** end, liquidation requires the position to be unhealthy at the **high** end. A thin
    weekend DEX print cannot liquidate anyone, and nobody can over-borrow against an optimistic weekend price.
    If the feed is frozen and no market prices it, both pause.
+6. **The pool insures itself.** Each weekend the keeper calls `hedge()`: the pool buys shares of the worst
+   range paying 10% of its outstanding loans if TSLA reopens 3% or more down, spending at most 1% of loans in
+   premium. The protocol carrying the gap risk is the buyer that pays the underwriter; `collectHedge()` returns
+   any payout to reserves. Borrowers can buy the same cover for their own loans from the Borrow page.
 
 ## Deployed on Robinhood Chain testnet (46630)
 
-All contracts are verified on the explorer.
+All contracts are verified on the explorer. These are the v2 contracts (underwriter fee, pool auto-hedge),
+deployed 2026-09-22; the v1 set is retired.
 
 | Contract | Address |
 |---|---|
-| GapMarket | [`0x44540A78c4006897109b33A60d89E4a5522CC4dB`](https://explorer.testnet.chain.robinhood.com/address/0x44540A78c4006897109b33A60d89E4a5522CC4dB) |
-| ImpliedPriceOracle | [`0xA7E0E23f9dab3041a0bd506db09f3d22a73d2406`](https://explorer.testnet.chain.robinhood.com/address/0xA7E0E23f9dab3041a0bd506db09f3d22a73d2406) |
-| GapGuardedLendingPool | [`0x6BF25eC4CB7E909b181cc844b4642a84c2f9A850`](https://explorer.testnet.chain.robinhood.com/address/0x6BF25eC4CB7E909b181cc844b4642a84c2f9A850) |
-| MarketCalendar | [`0x951F2e74FA66Bec48d8Bd5481C6B95D8147f75ba`](https://explorer.testnet.chain.robinhood.com/address/0x951F2e74FA66Bec48d8Bd5481C6B95D8147f75ba) |
-| MirroredFeed (RHTSLA / USD) | [`0xBfB0559AF20D15E844FF17810570c028Bad764C7`](https://explorer.testnet.chain.robinhood.com/address/0xBfB0559AF20D15E844FF17810570c028Bad764C7) |
+| GapMarket | [`0x5f2d5F54e28002a9b06100532a1EE9B9ad5e479e`](https://explorer.testnet.chain.robinhood.com/address/0x5f2d5F54e28002a9b06100532a1EE9B9ad5e479e) |
+| ImpliedPriceOracle | [`0xeB246817d2440F82F4B4C04c2C120afEFe1E5EC4`](https://explorer.testnet.chain.robinhood.com/address/0xeB246817d2440F82F4B4C04c2C120afEFe1E5EC4) |
+| GapGuardedLendingPool | [`0xBB924f325a7cDb1D53E514cB9691E3a19e26F6d1`](https://explorer.testnet.chain.robinhood.com/address/0xBB924f325a7cDb1D53E514cB9691E3a19e26F6d1) |
+| MarketCalendar | [`0x4897cA16aF49F84D689b59Be81abD9C0C760280f`](https://explorer.testnet.chain.robinhood.com/address/0x4897cA16aF49F84D689b59Be81abD9C0C760280f) |
+| MirroredFeed (RHTSLA / USD) | [`0x284a56BFBa8D03b662A23f4788bD458f835058f5`](https://explorer.testnet.chain.robinhood.com/address/0x284a56BFBa8D03b662A23f4788bD458f835058f5) |
 | USDG (Paxos, testnet) | `0x7E955252E15c84f5768B83c41a71F9eba181802F` |
 | TSLA stock token (testnet) | `0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E` |
 
@@ -93,27 +100,31 @@ AGENTS.md / CLAUDE.md     instructions for coding agents working in this repo
 
 ```bash
 cd contracts
-forge test                                                     # 33 tests, 2 fuzz suites x 1,000 runs
+forge test                                                     # 41 tests, 2 fuzz suites x 1,000 runs
 forge test --match-contract ForkedWeekend --fork-url robinhood_testnet   # full weekend on the deployed contracts
 ```
 
 - `MarketCalendar`: summer and winter closures, Thanksgiving, the DST-change weekend, and a fuzz test that
   every closed instant has a later open that really is the first open instant.
-- `GapMarket`: pricing, slippage, path independence, cherry-pick resistance, settlement, and a fuzz test that
-  the market stays solvent and fully accounted for after any sequence of trades and any settlement price.
+- `GapMarket`: pricing, slippage, round trips losing only fees, all-in quotes, fees to the creator, cherry-pick
+  resistance, settlement, and a fuzz test that the market stays solvent and fully accounted for (collateral plus
+  fees) after any sequence of trades and any settlement price.
 - `ImpliedPriceOracle` + `GapGuardedLendingPool`: passthrough, frozen-without-market pause, stale feed during
   market hours, bearish weekend shrinking borrowing power, a fake weekend print failing to liquidate, a
-  consensus crash that does liquidate, and deepest-market source selection.
-- `ForkedWeekend`: forks the live testnet and plays out borrow, freeze, pause, market open, gap-down trading,
-  reopen, settlement, redemption and return to the live feed against the deployed addresses.
+  consensus crash that does liquidate, deepest-market source selection, and the pool's hedge: bought within
+  budget, once per market, paying out in a crash and expiring worthless on a calm weekend.
+- `ForkedWeekend`: forks the live testnet and plays out borrow, freeze, pause, market open, the pool's hedge,
+  gap-down trading, a -4% reopen, settlement, the hedge paying into the pool, the underwriter's fees and return
+  to the live feed, all against the deployed v2 addresses.
 
 ## The agent
 
 `apps/agent` runs every minute:
 
-- **Keeper.** When the session closes it opens the weekend market (seeded with `b * ln(7)` USDG) and points
-  the oracle at the deepest market. After the reopen it waits for the first post-reopen feed round, settles,
-  redeems winning shares and withdraws the maker's residual.
+- **Keeper.** When the session closes it opens the weekend market (seeded with `b * ln(7)` USDG), points
+  the oracle at the deepest market and has the pool buy its cover. After the reopen it waits for the first
+  post-reopen feed round, settles, collects the pool's cover, redeems winning shares, withdraws the maker's
+  residual and claims the underwriter fees.
 - **Pricing agent.** Forecasts the reopening move and trades the market toward that forecast:
   - **Uniswap TSLA/USDG** on Robinhood Chain mainnet (the $660K v3 pool), because the stock token keeps
     trading while the stock does not. Depth-filtered: ignored below $100K of liquidity or more than 10% away

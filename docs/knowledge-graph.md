@@ -23,6 +23,7 @@ flowchart LR
   Uniswap_TSLA_USDG_v3_pool[/"Uniswap TSLA/USDG v3 pool"/]
   Backtest[("Backtest")]
   Decision__fitted_agent_parameters>"Decision: fitted agent parameters"]
+  Decision__underwriter_fee_and_pool_hedge>"Decision: underwriter fee and pool hedge"]
   GapMarket -->|reads session state from| MarketCalendar
   GapMarket -->|snapshots reference and settles from| MirroredFeed
   GapMarket -->|is collateralized in| USDG_testnet
@@ -46,6 +47,9 @@ flowchart LR
   Backtest -->|replays swap logs of| Uniswap_TSLA_USDG_v3_pool
   Backtest -->|scores forecasts against| Chainlink_RHTSLA_USD_mainnet
   Agent -->|follows| Decision__fitted_agent_parameters
+  GapGuardedLendingPool -->|buys weekend cover on| GapMarket
+  Agent -->|calls hedge and collectHedge on| GapGuardedLendingPool
+  GapMarket -->|implements| Decision__underwriter_fee_and_pool_hedge
 ```
 
 ## Projects
@@ -61,39 +65,41 @@ flowchart LR
 
 ### MarketCalendar
 
-- Testnet address 0x951F2e74FA66Bec48d8Bd5481C6B95D8147f75ba, verified
+- Testnet address 0x4897cA16aF49F84D689b59Be81abD9C0C760280f (v2 deployment), verified
 - Trading day D runs 20:00 ET on D-1 to 20:00 ET on D; open when D is a weekday and not a holiday
 - Handles US daylight time; owner sets NYSE full-day holidays (preloaded through 2027)
+- No nextClose view: the web app reads the next 8 sessionStart boundaries and takes the first closed one
 - 7 tests including a 1,000-run fuzz over 2026-2030
 
 ### MirroredFeed
 
-- Testnet address 0xBfB0559AF20D15E844FF17810570c028Bad764C7, verified, description RHTSLA / USD (mainnet mirror)
+- Testnet address 0x284a56BFBa8D03b662A23f4788bD458f835058f5 (v2 deployment), verified, RHTSLA / USD (mainnet mirror)
 - Owner-only AggregatorV3Interface; owner is the relayer key
 - Exists because Chainlink publishes Robinhood stock feeds on mainnet only
 
 ### GapMarket
 
-- Testnet address 0x44540A78c4006897109b33A60d89E4a5522CC4dB (v1), verified
+- Testnet address 0x5f2d5F54e28002a9b06100532a1EE9B9ad5e479e (v2), verified; v1 0x44540A78c4006897109b33A60d89E4a5522CC4dB retired
 - LMSR over reopening ranges; creator seeds b * ln(n) USDG; winning share redeems 1 USDG
 - Outcome shares are ERC1155Supply tokens, tokenId = marketId << 8 | outcome
 - resolve(marketId, roundId) needs the first round at or after reopen, within 6 h, predecessor before reopen
-- v1 has no trading fee, so underwriters have no expected profit (v2 adds a fee)
-- 13 tests including a 1,000-run solvency fuzz
+- v2: feeBps = 100 on every buy and sell to the creator (underwriter), claimable anytime via claimFees; quotes all-in
+- 17 tests including a 1,000-run solvency fuzz with fees
 
 ### ImpliedPriceOracle
 
-- Testnet address 0xA7E0E23f9dab3041a0bd506db09f3d22a73d2406 (v1), verified
+- Testnet address 0xeB246817d2440F82F4B4C04c2C120afEFe1E5EC4 (v2 deployment), verified
 - Drop-in AggregatorV3Interface: live feed when fresh, market-implied mean and +/-2 sd band when frozen
 - Frozen = session closed or feed older than 1 day during market hours
 - setActiveMarket is permissionless but only the deepest market for the current closure, min depth 10 shares
 
 ### GapGuardedLendingPool
 
-- Testnet address 0x6BF25eC4CB7E909b181cc844b4642a84c2f9A850 (v1), verified, demo only
+- Testnet address 0xBB924f325a7cDb1D53E514cB9691E3a19e26F6d1 (v2), verified, demo only; funded with 20 testnet USDG
 - Borrow and withdraw priced at band low; liquidation requires unhealthy at band high
 - Pauses both when the feed is frozen and no market prices it
-- Max LTV 50%, liquidation threshold 70%, bonus 5%; funded with 20 testnet USDG
+- v2: hedge(marketId) buys worst-range cover paying 10% of totalDebt for at most 1% of it, once per market; collectHedge redeems
+- Max LTV 50%, liquidation threshold 70%, bonus 5%
 
 ## Services
 
@@ -105,7 +111,7 @@ flowchart LR
 ### Agent
 
 - apps/agent, runs under pm2, logs/agent.log, ticks every 60 s
-- Keeper: opens the closure market (depth 20, ranges -300/-100/-25/25/100/300 bps), points the oracle, settles, redeems, withdraws residual
+- Keeper: opens the closure market (depth 20, ranges -300/-100/-25/25/100/300 bps), points the oracle, has the pool hedge, settles, collects the pool's cover, redeems, withdraws residual, claims fees
 - Pricing agent: normal belief, mean = 0.5 x Uniswap gap + 0.5 x (0.35 x weekend BTC move), sd 0.75%, plus optional Claude drift
 - Uniswap signal ignored below $100K pool liquidity or beyond 10% from Friday's close
 - Hard caps: 5 USDG per trade, 25 USDG net per market, never short, simulate before send
@@ -115,7 +121,9 @@ flowchart LR
 
 - apps/web, TanStack Router + Query, wagmi 3 injected connector, shadcn radix-nova, zustand
 - Served by pm2 at http://localhost:4173 (vite preview of the production build)
-- Not yet checked visually in a browser
+- Market page: ranges, trade panel, cost to move the implied price 1% (client-side LMSR), underwriter fees
+- Borrow page: gap-aware pricing banner, Protect my loan (cover sized to 10/25/50% of debt), the pool's own cover
+- Checked visually with Playwright headless screenshots on 2026-09-22 (weekday state)
 
 ## Externals
 
@@ -150,6 +158,7 @@ flowchart LR
 
 - 0x610FdB41DA83138615C317c89fd9EB09271a46fe, burner, key in git-ignored .env and considered exposed
 - Relayer owner, market creator and agent trader on testnet
+- Holds 80 USDG and 4 TSLA after funding the v2 pool with 20 USDG; 1 TSLA sits as collateral in the retired v1 pool
 
 ## Decisions
 
@@ -166,6 +175,12 @@ flowchart LR
 
 - 2026-09-23: beta 0.3 -> 0.35 (least squares), sd 2% -> 0.75%, 50/50 DEX+BTC blend, ranges tightened from +-0.5/2/5% to +-0.25/1/3%
 - Reason: backtest showed gaps far smaller than assumed and the blend beat each signal alone
+
+### Decision: underwriter fee and pool hedge
+
+- 2026-09-23: v1 had no fee, so nobody would rationally underwrite; the pool was not a buyer of cover
+- v2 adds a 1% trading fee to the market's creator and makes the lending pool buy its own weekend cover
+- Answers the judge question 'who else trades this?': the protocol carrying the gap risk pays the underwriter
 
 ## Evidences
 

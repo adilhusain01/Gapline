@@ -70,6 +70,10 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
 - Observed weekends: last print lands Friday afternoon ET; the **first print after every closure lands exactly at
   Sunday 20:00 ET** (Mon 00:00 UTC; Tue 00:00 UTC after Labor Day). Frozen 52 to 78 h; gaps +0.05%, -1.09%, +0.38%.
 - `GapMarket.resolve` only accepts a round within 6 h after the reopen (`MAX_SETTLE_DELAY`).
+- v2 (deployed 2026-09-22): `GapMarket` charges `feeBps` (100) on every buy and sell, paid to the market's creator
+  via `claimFees`; quotes are all-in. `GapGuardedLendingPool.hedge(marketId)` buys worst-range cover worth 10% of
+  `totalDebt` for at most 1% of it, once per market, only on the oracle's active market; `collectHedge` redeems.
+  v1 addresses are retired; the 20 USDG left in the v1 pool was recovered by borrowing against 1 TSLA.
 - `createMarket` needs the feed's last update at or before the close and no more than 3 days older than it.
 - `oraclePaused()` (corporate actions) was not found on the feed or token contracts; the oracle treats a stale
   feed during market hours as frozen instead.
