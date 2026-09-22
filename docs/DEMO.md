@@ -30,6 +30,8 @@ cast balance 0x610FdB41DA83138615C317c89fd9EB09271a46fe --ether --rpc-url https:
   faucet.testnet.chain.robinhood.com and faucet.paxos.com if needed.
 - Before Friday's close, open a small loan so the pool has something to insure: on the Borrow page deposit
   1 TSLA and borrow about 20 USDG. The keeper sizes the pool's cover to outstanding loans.
+- Friday afternoon, run the dress rehearsal once more: `scripts/rehearse-weekend.sh`. It plays the whole weekend
+  on a throwaway fork with the real agent and should end with the pool's reserves rising (cover paid out).
 - Mac plugged in, lid open (the `awake` process blocks idle sleep, not lid-close sleep).
 - Optional: put `ANTHROPIC_API_KEY=...` in `.env` and `npx pm2 restart agent` to turn on the news analyst.
 

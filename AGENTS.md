@@ -42,6 +42,7 @@ npx pm2 start ecosystem.config.cjs && npx pm2 logs            # logs also in log
 npm run signal -w @gapline/agent                              # print BTC + Uniswap signals and belief (pre-flight)
 npm run backtest -w @gapline/agent                            # replay every past weekend, writes docs/backtest.md
 npm run once -w @gapline/agent                                # one keeper + trader cycle
+scripts/rehearse-weekend.sh [GAP_PER_MILLE]                   # full weekend on a local anvil fork with the real agent
 cd apps/web && npx tsc --noEmit && npm run build
 ```
 
@@ -92,6 +93,14 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
 - Backtest (docs/backtest.md, 13 closures, 9 with pool data): MAE no-change 0.67 pp, BTC x 0.35 0.51 pp, DEX 0.45 pp,
   50/50 blend 0.39 pp; DEX direction right 6/7; actual gap RMS 0.80%. Agent uses beta 0.35, sd 0.75%, blend 0.5,
   ranges -300/-100/-25/25/100/300 bps.
+
+- The agent follows **chain time**, not the laptop clock: `syncClock()` reads the latest block each tick, because the
+  contracts decide open/closed and settlement windows with `block.timestamp`.
+- `TESTNET_RPC_URL` (agent) and `VITE_TESTNET_RPC_URL` (web) point at a fork for rehearsals; unset means the public RPC.
+  Never ship a web build made with the fork variable (check `apps/web/dist` does not contain `localhost:8547`).
+- Weekend rehearsal (2026-09-22, `scripts/rehearse-weekend.sh`): open market, point oracle, pool hedge, trade on
+  Saturday; settle, collect cover (+0.50 USDG on a -3.5% reopen for 0.07 USDG premium), withdraw residual and claim
+  fees on Sunday, all by the real agent against the v2 contracts. It surfaced six UI and agent bugs, all fixed.
 
 ## Operating the weekend
 

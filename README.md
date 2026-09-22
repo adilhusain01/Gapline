@@ -113,6 +113,9 @@ forge test --match-contract ForkedWeekend --fork-url robinhood_testnet   # full 
   market hours, bearish weekend shrinking borrowing power, a fake weekend print failing to liquidate, a
   consensus crash that does liquidate, deepest-market source selection, and the pool's hedge: bought within
   budget, once per market, paying out in a crash and expiring worthless on a calm weekend.
+- `scripts/rehearse-weekend.sh`: the whole weekend on a local fork with the **real agent and web app**: the
+  keeper opens the market, points the oracle, has the pool hedge and trades on Saturday, then settles, collects
+  the pool's cover, withdraws the residual and claims fees after the Sunday reopen.
 - `ForkedWeekend`: forks the live testnet and plays out borrow, freeze, pause, market open, the pool's hedge,
   gap-down trading, a -4% reopen, settlement, the hedge paying into the pool, the underwriter's fees and return
   to the live feed, all against the deployed v2 addresses.

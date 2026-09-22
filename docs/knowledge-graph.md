@@ -24,6 +24,7 @@ flowchart LR
   Backtest[("Backtest")]
   Decision__fitted_agent_parameters>"Decision: fitted agent parameters"]
   Decision__underwriter_fee_and_pool_hedge>"Decision: underwriter fee and pool hedge"]
+  Weekend_rehearsal[("Weekend rehearsal")]
   GapMarket -->|reads session state from| MarketCalendar
   GapMarket -->|snapshots reference and settles from| MirroredFeed
   GapMarket -->|is collateralized in| USDG_testnet
@@ -50,6 +51,9 @@ flowchart LR
   GapGuardedLendingPool -->|buys weekend cover on| GapMarket
   Agent -->|calls hedge and collectHedge on| GapGuardedLendingPool
   GapMarket -->|implements| Decision__underwriter_fee_and_pool_hedge
+  Weekend_rehearsal -->|exercises| Agent
+  Weekend_rehearsal -->|screenshots| Web_app
+  Weekend_rehearsal -->|verifies hedge payout of| GapGuardedLendingPool
 ```
 
 ## Projects
@@ -116,6 +120,7 @@ flowchart LR
 - Uniswap signal ignored below $100K pool liquidity or beyond 10% from Friday's close
 - Hard caps: 5 USDG per trade, 25 USDG net per market, never short, simulate before send
 - Claude analyst is off until ANTHROPIC_API_KEY is set
+- Follows chain time (syncClock each tick), since contracts judge sessions by block.timestamp
 
 ### Web app
 
@@ -123,7 +128,7 @@ flowchart LR
 - Served by pm2 at http://localhost:4173 (vite preview of the production build)
 - Market page: ranges, trade panel, cost to move the implied price 1% (client-side LMSR), underwriter fees
 - Borrow page: gap-aware pricing banner, Protect my loan (cover sized to 10/25/50% of debt), the pool's own cover
-- Checked visually with Playwright headless screenshots on 2026-09-22 (weekday state)
+- Checked with Playwright screenshots on 2026-09-22 in weekday, Saturday (fork) and settled Monday (fork) states
 
 ## Externals
 
@@ -190,3 +195,10 @@ flowchart LR
 - 13 weekend closures since late June 2026, 9 with Uniswap swap data
 - MAE: no change 0.67 pp, BTC x 0.35 0.51 pp, DEX 0.45 pp, 50/50 blend 0.39 pp; DEX direction right 6 of 7
 - Actual reopening gap RMS 0.80%
+
+### Weekend rehearsal
+
+- scripts/rehearse-weekend.sh: anvil fork of testnet, real agent, clock moved to the coming weekend
+- Saturday: market opened, oracle pointed, pool bought cover (0.50 USDG payout for 0.07 USDG), trader bought 10.35 shares of -1% to -0.25%
+- Sunday: settled on the reopening round, pool collected 0.50 USDG, residual withdrawn, 0.019 USDG fees claimed
+- Surfaced six bugs fixed before the live weekend: agent wall-clock time, ambiguous range prices, UTC freeze label, stale oracle badge, settled-card label, session-close countdown
