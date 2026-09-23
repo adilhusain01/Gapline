@@ -27,7 +27,7 @@ contract ForkedWeekendTest is Test {
     ImpliedPriceOracle oracle;
     GapGuardedLendingPool pool;
     IERC20 usdg;
-    IERC20 tsla;
+    IERC20 stockToken;
 
     address relayer;
     address maker = makeAddr("maker");
@@ -45,7 +45,7 @@ contract ForkedWeekendTest is Test {
         oracle = ImpliedPriceOracle(json.readAddress(string.concat(stock, ".oracle")));
         pool = GapGuardedLendingPool(json.readAddress(string.concat(stock, ".lendingPool")));
         usdg = IERC20(json.readAddress(".usdg"));
-        tsla = IERC20(json.readAddress(string.concat(stock, ".token")));
+        stockToken = IERC20(json.readAddress(string.concat(stock, ".token")));
         relayer = feed.owner();
 
         // Stylus programs start with the 0xEFF000 prefix; the fork's EVM cannot run them.
@@ -57,13 +57,13 @@ contract ForkedWeekendTest is Test {
         deal(address(usdg), maker, 5_000e6);
         deal(address(usdg), bear, 5_000e6);
         deal(address(usdg), address(pool), 50_000e6);
-        deal(address(tsla), borrower, 10e18);
+        deal(address(stockToken), borrower, 10e18);
         for (uint256 i; i < 3; ++i) {
             address who = [maker, bear, borrower][i];
             vm.startPrank(who);
             usdg.approve(address(gm), type(uint256).max);
             usdg.approve(address(pool), type(uint256).max);
-            tsla.approve(address(pool), type(uint256).max);
+            stockToken.approve(address(pool), type(uint256).max);
             vm.stopPrank();
         }
     }
@@ -77,6 +77,11 @@ contract ForkedWeekendTest is Test {
         // 1. Borrow while the session is open and the live feed is priced.
         uint256 openTs = cal.nextOpen(block.timestamp);
         if (!cal.isOpen(block.timestamp)) vm.warp(openTs + 1 hours);
+        if (feed.latestRound() == 0) {
+            // A fresh deployment the relayer has not reached yet: stand in for its first round.
+            vm.prank(relayer);
+            feed.mirror(250e8, block.timestamp, block.timestamp);
+        }
         (, int256 livePrice,,,) = feed.latestRoundData();
         assertGt(livePrice, 0, "relayer has mirrored a price");
 
