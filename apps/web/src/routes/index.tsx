@@ -18,6 +18,7 @@ import {
 	useSessionStatus,
 	useSettlementRound,
 	useShareBalances,
+	useStock,
 } from "@/lib/gapline";
 import { useUi } from "@/lib/store";
 import { useTx } from "@/lib/useTx";
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/")({ component: MarketPage });
 function MarketPage() {
 	const { markets, isLoading } = useMarkets();
 	const status = useSessionStatus();
+	const stock = useStock();
 	const { selectedMarketId, selectMarket } = useUi();
 	const [outcome, setOutcome] = useState(3);
 	const { send, pending } = useTx();
@@ -67,7 +69,7 @@ function MarketPage() {
 						<CardHeader className="flex-row items-start justify-between space-y-0">
 							<div className="space-y-1">
 								<CardTitle className="text-base font-medium">
-									Where does TSLA reopen?
+									Where does {stock.symbol} reopen?
 								</CardTitle>
 								<p className="text-sm text-muted-foreground">
 									Friday close {usd(selected.refPrice)} - settles on the first
@@ -138,9 +140,9 @@ function MarketPage() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="text-sm text-muted-foreground">
-						TSLA is trading and the Chainlink feed is live, so there is nothing
-						to price. A market can be opened as soon as the session closes on
-						Friday at 20:00 ET.
+						{stock.symbol} is trading and the Chainlink feed is live, so there
+						is nothing to price. A market can be opened as soon as the session
+						closes on Friday at 20:00 ET.
 					</CardContent>
 				</Card>
 			)}

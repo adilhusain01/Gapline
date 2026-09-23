@@ -9,16 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usdg } from "@/lib/format";
-import { addresses, useWalletState } from "@/lib/gapline";
+import { addresses, useStock, useWalletState } from "@/lib/gapline";
 import { useTx } from "@/lib/useTx";
 
-/** Ranges for the reopening move, in basis points, sized to measured gaps (docs/backtest.md). */
+/** Ranges for the reopening move, in basis points, sized to measured gaps (docs/backtest-TSLA.md, docs/backtest-AMZN.md). */
 const EDGES = [-300n, -100n, -25n, 25n, 100n, 300n] as const;
 const TAIL_WIDTH_BPS = 200n;
 
 export function OpenMarketCard() {
 	const { isConnected } = useAccount();
-	const [depth, setDepth] = useState("20");
+	const stock = useStock();
+	const [depth, setDepth] = useState("10");
 	const { send, pending } = useTx();
 	const wallet = useWalletState();
 
@@ -45,11 +46,11 @@ export function OpenMarketCard() {
 			});
 			if (!ok) return;
 		}
-		await send("Open weekend market", {
+		await send(`Open ${stock.symbol} weekend market`, {
 			address: addresses.gapMarket,
 			abi: gapMarketAbi,
 			functionName: "createMarket",
-			args: [addresses.feed, EDGES, liquidity, TAIL_WIDTH_BPS],
+			args: [stock.feed.address, EDGES, liquidity, TAIL_WIDTH_BPS],
 		});
 	}
 
@@ -57,11 +58,11 @@ export function OpenMarketCard() {
 		<Card>
 			<CardHeader className="space-y-1">
 				<CardTitle className="text-base font-medium">
-					Open this weekend's market
+					Open this weekend's {stock.symbol} market
 				</CardTitle>
 				<p className="text-sm text-muted-foreground">
-					The feed is frozen, so nothing is pricing TSLA right now. Seed a
-					market maker and the oracle has a price again.
+					The feed is frozen, so nothing is pricing {stock.symbol} right now.
+					Seed a market maker and the oracle has a price again.
 				</p>
 			</CardHeader>
 			<CardContent className="space-y-4">

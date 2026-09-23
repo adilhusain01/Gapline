@@ -14,6 +14,7 @@ import {
 	chainId,
 	type MarketView,
 	usePoolHedge,
+	useStock,
 	useWalletState,
 } from "@/lib/gapline";
 import { useTx } from "@/lib/useTx";
@@ -37,6 +38,7 @@ export function ProtectLoanCard({
 	const { send, pending } = useTx();
 	const wallet = useWalletState();
 	const poolHedge = usePoolHedge(market?.id);
+	const stock = useStock();
 
 	const payout = ((debt ?? 0n) * BigInt(level)) / 100n; // USDG units
 	const shares = payout * 10n ** 12n; // each winning share pays 1 USDG
@@ -81,7 +83,7 @@ export function ProtectLoanCard({
 				</CardTitle>
 				<p className="text-sm text-muted-foreground">
 					{market
-						? `Pays out if TSLA reopens ${rangeLabel(market.edges, CRASH_RANGE)} versus Friday's close.`
+						? `Pays out if ${stock.symbol} reopens ${rangeLabel(market.edges, CRASH_RANGE)} versus Friday's close.`
 						: "Cover opens with the weekend market, when the session closes on Friday."}
 				</p>
 			</CardHeader>

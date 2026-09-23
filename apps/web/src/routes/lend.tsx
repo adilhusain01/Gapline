@@ -17,6 +17,7 @@ import {
 	useMarkets,
 	usePosition,
 	useSessionStatus,
+	useStock,
 	useWalletState,
 } from "@/lib/gapline";
 import { useTx } from "@/lib/useTx";
@@ -52,8 +53,9 @@ function LendPage() {
 	const { markets } = useMarkets();
 	const activeMarket = markets.find((m) => m.id === status.activeMarketId);
 	const { send, pending } = useTx();
+	const stock = useStock();
 	const [collateral, setCollateral] = useState("1");
-	const [borrow, setBorrow] = useState("50");
+	const [borrow, setBorrow] = useState("5");
 
 	const collateralAmount = (() => {
 		try {
@@ -75,16 +77,16 @@ function LendPage() {
 
 	async function deposit() {
 		if (wallet.stockAllowance < collateralAmount) {
-			const ok = await send("Approve TSLA", {
-				address: addresses.stock,
+			const ok = await send(`Approve ${stock.symbol}`, {
+				address: stock.token,
 				abi: erc20Abi,
 				functionName: "approve",
-				args: [addresses.pool, maxUint256],
+				args: [stock.pool.address, maxUint256],
 			});
 			if (!ok) return;
 		}
-		await send(`Deposit ${collateral} TSLA`, {
-			address: addresses.pool,
+		await send(`Deposit ${collateral} ${stock.symbol}`, {
+			address: stock.pool.address,
 			abi: gapGuardedLendingPoolAbi,
 			functionName: "deposit",
 			args: [collateralAmount],
@@ -97,12 +99,12 @@ function LendPage() {
 				address: addresses.usdg,
 				abi: erc20Abi,
 				functionName: "approve",
-				args: [addresses.pool, maxUint256],
+				args: [stock.pool.address, maxUint256],
 			});
 			if (!ok) return;
 		}
 		await send(`Repay ${borrow} USDG`, {
-			address: addresses.pool,
+			address: stock.pool.address,
 			abi: gapGuardedLendingPoolAbi,
 			functionName: "repay",
 			args: [address ?? "0x0", borrowAmount],
@@ -114,7 +116,7 @@ function LendPage() {
 			<Card>
 				<CardHeader className="space-y-1">
 					<CardTitle className="text-base font-medium">
-						Borrow USDG against TSLA
+						Borrow USDG against {stock.symbol}
 					</CardTitle>
 					<p className="text-sm text-muted-foreground">
 						A demo pool that prices collateral through the gap oracle. While the
@@ -159,7 +161,7 @@ function LendPage() {
 
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2">
-							<Label htmlFor="collateral">Deposit TSLA</Label>
+							<Label htmlFor="collateral">Deposit {stock.symbol}</Label>
 							<Input
 								id="collateral"
 								inputMode="decimal"
@@ -172,7 +174,7 @@ function LendPage() {
 								{wallet.stockBalance !== undefined
 									? Number(formatUnits(wallet.stockBalance, 18)).toFixed(2)
 									: "--"}{" "}
-								TSLA
+								{stock.symbol}
 							</p>
 							<Button
 								className="w-full"
@@ -202,7 +204,7 @@ function LendPage() {
 									disabled={!isConnected || paused || Boolean(pending)}
 									onClick={() =>
 										send(`Borrow ${borrow} USDG`, {
-											address: addresses.pool,
+											address: stock.pool.address,
 											abi: gapGuardedLendingPoolAbi,
 											functionName: "borrow",
 											args: [borrowAmount],
@@ -237,7 +239,7 @@ function LendPage() {
 							label="Collateral"
 							value={
 								position.collateral !== undefined
-									? `${Number(formatUnits(position.collateral, 18)).toFixed(2)} TSLA`
+									? `${Number(formatUnits(position.collateral, 18)).toFixed(2)} ${stock.symbol}`
 									: "--"
 							}
 						/>

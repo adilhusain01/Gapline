@@ -1,4 +1,8 @@
-import { robinhoodTestnet } from "@gapline/abi";
+import {
+	robinhoodTestnet,
+	STOCK_SYMBOLS,
+	type StockSymbol,
+} from "@gapline/abi";
 import { Link } from "@tanstack/react-router";
 import { Moon, Sun, Wallet } from "lucide-react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
@@ -11,6 +15,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { shortAddress } from "@/lib/format";
 import { useSessionStatus } from "@/lib/gapline";
 import { useUi } from "@/lib/store";
@@ -30,6 +35,25 @@ function SessionPill() {
 			<span className="size-1.5 rounded-full bg-current" />
 			{implied ? "Gap-implied price" : isFeedFrozen ? "Feed frozen" : label}
 		</Badge>
+	);
+}
+
+/** Picks the stock every page shows; each has its own feed, market, oracle and lending pool. */
+function StockPicker() {
+	const { stock, selectStock } = useUi();
+	return (
+		<Tabs
+			value={stock}
+			onValueChange={(value) => selectStock(value as StockSymbol)}
+		>
+			<TabsList aria-label="Stock">
+				{STOCK_SYMBOLS.map((symbol) => (
+					<TabsTrigger key={symbol} value={symbol} className="font-mono">
+						{symbol}
+					</TabsTrigger>
+				))}
+			</TabsList>
+		</Tabs>
 	);
 }
 
@@ -105,6 +129,7 @@ export function AppHeader() {
 						Borrow
 					</Link>
 				</nav>
+				<StockPicker />
 				<div className="ml-auto flex items-center gap-2">
 					<SessionPill />
 					<Button

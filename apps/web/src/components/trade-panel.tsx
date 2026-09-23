@@ -16,6 +16,7 @@ import {
 	chainId,
 	type MarketView,
 	useSessionStatus,
+	useStock,
 	useWalletState,
 } from "@/lib/gapline";
 import { useTx } from "@/lib/useTx";
@@ -37,6 +38,7 @@ export function TradePanel({
 	const { send, pending } = useTx();
 	const wallet = useWalletState();
 	const status = useSessionStatus();
+	const stock = useStock();
 
 	const size = (() => {
 		try {
@@ -201,7 +203,7 @@ export function TradePanel({
 						disabled={Boolean(pending)}
 						onClick={() =>
 							send("Use as oracle source", {
-								address: addresses.oracle,
+								address: stock.oracle.address,
 								abi: impliedPriceOracleAbi,
 								functionName: "setActiveMarket",
 								args: [market.id],

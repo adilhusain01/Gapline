@@ -1,30 +1,28 @@
 import {
 	deployment,
 	gapGuardedLendingPoolAbi,
-	gapGuardedLendingPoolAddress,
 	gapMarketAbi,
 	gapMarketAddress,
 	impliedPriceOracleAbi,
-	impliedPriceOracleAddress,
 	marketCalendarAbi,
 	marketCalendarAddress,
 	mirroredFeedAbi,
-	mirroredFeedAddress,
 	robinhoodTestnet,
+	stocks,
 } from "@gapline/abi";
 import { useMemo } from "react";
 import { erc20Abi } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
+import { useUi } from "@/lib/store";
+
 const chainId = robinhoodTestnet.id;
+/** Contracts shared by every stock. */
 export const addresses = {
 	calendar: marketCalendarAddress[chainId],
-	feed: mirroredFeedAddress[chainId],
 	gapMarket: gapMarketAddress[chainId],
-	oracle: impliedPriceOracleAddress[chainId],
-	pool: gapGuardedLendingPoolAddress[chainId],
-	usdg: deployment.usdg as `0x${string}`,
-	stock: deployment.stock as `0x${string}`,
+	lmsrMath: deployment.lmsrMath,
+	usdg: deployment.usdg,
 } as const;
 
 const calendar = {
@@ -32,26 +30,36 @@ const calendar = {
 	abi: marketCalendarAbi,
 	chainId,
 } as const;
-const oracle = {
-	address: addresses.oracle,
-	abi: impliedPriceOracleAbi,
-	chainId,
-} as const;
-const feed = {
-	address: addresses.feed,
-	abi: mirroredFeedAbi,
-	chainId,
-} as const;
 const market = {
 	address: addresses.gapMarket,
 	abi: gapMarketAbi,
 	chainId,
 } as const;
-const pool = {
-	address: addresses.pool,
-	abi: gapGuardedLendingPoolAbi,
-	chainId,
-} as const;
+
+/** The stock picked in the header, with its testnet feed, oracle, lending pool and token. */
+export function useStock() {
+	const symbol = useUi((state) => state.stock);
+	return useMemo(() => {
+		const stock = stocks[symbol];
+		const d = stock.testnet;
+		return {
+			symbol,
+			name: stock.name,
+			token: d.token,
+			feed: { address: d.feed, abi: mirroredFeedAbi, chainId } as const,
+			oracle: {
+				address: d.oracle,
+				abi: impliedPriceOracleAbi,
+				chainId,
+			} as const,
+			pool: {
+				address: d.lendingPool,
+				abi: gapGuardedLendingPoolAbi,
+				chainId,
+			} as const,
+		};
+	}, [symbol]);
+}
 
 export type PriceBand = {
 	low: bigint;
@@ -60,8 +68,9 @@ export type PriceBand = {
 	implied: boolean;
 };
 
-/** Session state, live feed round and the price the oracle is publishing right now. */
+/** Session state, the stock's live feed round and the price its oracle is publishing right now. */
 export function useSessionStatus() {
+	const { feed, oracle } = useStock();
 	const now = BigInt(Math.floor(Date.now() / 1000));
 	const query = useReadContracts({
 		contracts: [
@@ -149,6 +158,7 @@ export function useNextClose() {
 
 export type MarketView = {
 	id: bigint;
+	feed: `0x${string}`;
 	refPrice: bigint;
 	closeTs: bigint;
 	reopenTs: bigint;
@@ -167,8 +177,9 @@ export type MarketView = {
 	stdevBps: bigint;
 };
 
-/** Every market, newest first, with live LMSR prices. */
+/** The selected stock's markets, newest first, with live LMSR prices. */
 export function useMarkets() {
+	const { feed } = useStock();
 	const count = useReadContract({ ...market, functionName: "marketCount" });
 	const ids = useMemo(() => {
 		const total = Number(count.data ?? 0n);
@@ -200,6 +211,7 @@ export function useMarkets() {
 				if (!raw || !prices || !move) return undefined;
 				return {
 					id,
+					feed: raw.feed as `0x${string}`,
 					refPrice: raw.refPrice as bigint,
 					closeTs: raw.closeTs as bigint,
 					reopenTs: raw.reopenTs as bigint,
@@ -218,8 +230,9 @@ export function useMarkets() {
 					stdevBps: move[1],
 				} satisfies MarketView;
 			})
-			.filter((m): m is MarketView => Boolean(m));
-	}, [details.data, ids]);
+			.filter((m): m is MarketView => Boolean(m))
+			.filter((m) => m.feed.toLowerCase() === feed.address.toLowerCase());
+	}, [details.data, ids, feed.address]);
 
 	return {
 		markets,
@@ -228,9 +241,10 @@ export function useMarkets() {
 	};
 }
 
-/** Balances and allowances for the connected wallet. */
+/** Balances and allowances for the connected wallet, for USDG and the selected stock. */
 export function useWalletState() {
 	const { address } = useAccount();
+	const { token, pool } = useStock();
 	const query = useReadContracts({
 		contracts: [
 			{
@@ -252,21 +266,21 @@ export function useWalletState() {
 				abi: erc20Abi,
 				chainId,
 				functionName: "allowance",
-				args: [address ?? "0x0", addresses.pool],
+				args: [address ?? "0x0", pool.address],
 			},
 			{
-				address: addresses.stock,
+				address: token,
 				abi: erc20Abi,
 				chainId,
 				functionName: "balanceOf",
 				args: [address ?? "0x0"],
 			},
 			{
-				address: addresses.stock,
+				address: token,
 				abi: erc20Abi,
 				chainId,
 				functionName: "allowance",
-				args: [address ?? "0x0", addresses.pool],
+				args: [address ?? "0x0", pool.address],
 			},
 		],
 		query: { enabled: Boolean(address) },
@@ -288,9 +302,10 @@ export function useWalletState() {
 	};
 }
 
-/** The connected wallet's position in the demo lending pool. */
+/** The connected wallet's position in the selected stock's demo lending pool. */
 export function usePosition() {
 	const { address } = useAccount();
+	const { pool } = useStock();
 	const query = useReadContracts({
 		contracts: [
 			{ ...pool, functionName: "collateralOf", args: [address ?? "0x0"] },
@@ -324,6 +339,7 @@ export function usePosition() {
 
 /** The lending pool's own gap cover on a market, and its total outstanding debt. */
 export function usePoolHedge(marketId: bigint | undefined) {
+	const { pool } = useStock();
 	const query = useReadContracts({
 		contracts: [
 			{ ...pool, functionName: "totalDebt" },
@@ -365,6 +381,7 @@ export function useShareBalances(
  * Walks back from the latest round, which on a mirrored feed is a handful of entries.
  */
 export function useSettlementRound(market: MarketView | undefined) {
+	const { feed } = useStock();
 	const latest = useReadContract({
 		...feed,
 		functionName: "latestRound",

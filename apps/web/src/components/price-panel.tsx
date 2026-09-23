@@ -15,7 +15,12 @@ import {
 	timeAgo,
 	usd,
 } from "@/lib/format";
-import { type MarketView, useNextClose, useSessionStatus } from "@/lib/gapline";
+import {
+	type MarketView,
+	useNextClose,
+	useSessionStatus,
+	useStock,
+} from "@/lib/gapline";
 
 function Stat({
 	label,
@@ -37,6 +42,7 @@ function Stat({
 
 export function PricePanel({ active }: { active?: MarketView }) {
 	const status = useSessionStatus();
+	const stock = useStock();
 	const nextClose = useNextClose();
 	const now = Math.floor(Date.now() / 1000);
 
@@ -52,7 +58,7 @@ export function PricePanel({ active }: { active?: MarketView }) {
 		<Card>
 			<CardHeader className="flex-row items-center justify-between space-y-0">
 				<CardTitle className="text-base font-medium">
-					TSLA on Robinhood Chain
+					{stock.name} ({stock.symbol}) on Robinhood Chain
 				</CardTitle>
 				<span className="flex items-center gap-1.5 text-xs text-muted-foreground">
 					<Activity className="size-3.5" />
