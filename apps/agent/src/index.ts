@@ -1,5 +1,7 @@
 import { formatUnits } from "viem";
 
+import { STOCK_SYMBOLS } from "@gapline/abi";
+
 import { account, contracts, log, syncClock, testnet } from "./chain";
 import { config } from "./config";
 import { keeperTick } from "./keeper";
@@ -26,7 +28,7 @@ async function tick() {
 const balance = await testnet.readContract({ ...contracts.usdg, functionName: "balanceOf", args: [account.address] });
 log(
   "agent",
-  `${account.address} with ${formatUnits(balance, 6)} USDG; depth ${config.depth}, max ${config.maxSpendPerTradeUsdg} USDG/trade, ` +
+  `${account.address} with ${formatUnits(balance, 6)} USDG; stocks ${STOCK_SYMBOLS.join(", ")}; depth ${config.depth}, max ${config.maxSpendPerTradeUsdg} USDG/trade, ` +
     `${config.maxExposureUsdg} USDG/market${config.dryRun ? ", dry run" : ""}; analyst ${process.env.ANTHROPIC_API_KEY ? "on" : "off"}`,
 );
 

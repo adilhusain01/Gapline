@@ -1,18 +1,17 @@
 import {
+  type StockSymbol,
   aggregatorV3InterfaceAbi,
   deployment,
   gapGuardedLendingPoolAbi,
-  gapGuardedLendingPoolAddress,
   gapMarketAbi,
   gapMarketAddress,
   impliedPriceOracleAbi,
-  impliedPriceOracleAddress,
   marketCalendarAbi,
   marketCalendarAddress,
   mirroredFeedAbi,
-  mirroredFeedAddress,
   robinhood,
   robinhoodTestnet,
+  stocks,
 } from "@gapline/abi";
 import { createPublicClient, createWalletClient, erc20Abi, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -28,14 +27,22 @@ export const testnet = createPublicClient({ chain: robinhoodTestnet, transport: 
 export const mainnet = createPublicClient({ chain: robinhood, transport: http() });
 export const wallet = createWalletClient({ account, chain: robinhoodTestnet, transport: http(testnetRpc) });
 
+/** Contracts shared by every stock. */
 export const contracts = {
   calendar: { address: marketCalendarAddress[id], abi: marketCalendarAbi },
-  feed: { address: mirroredFeedAddress[id], abi: mirroredFeedAbi },
   market: { address: gapMarketAddress[id], abi: gapMarketAbi },
-  oracle: { address: impliedPriceOracleAddress[id], abi: impliedPriceOracleAbi },
-  pool: { address: gapGuardedLendingPoolAddress[id], abi: gapGuardedLendingPoolAbi },
-  usdg: { address: deployment.usdg as `0x${string}`, abi: erc20Abi },
+  usdg: { address: deployment.usdg, abi: erc20Abi },
 } as const;
+
+/** One stock's testnet feed, oracle and lending pool. */
+export function stockContracts(symbol: StockSymbol) {
+  const d = stocks[symbol].testnet;
+  return {
+    feed: { address: d.feed, abi: mirroredFeedAbi },
+    oracle: { address: d.oracle, abi: impliedPriceOracleAbi },
+    pool: { address: d.lendingPool, abi: gapGuardedLendingPoolAbi },
+  } as const;
+}
 
 /** Chainlink WBTC / USD on Robinhood Chain mainnet: crypto keeps trading while stocks are closed. */
 export const MAINNET_BTC_FEED = { address: "0x62107b0d3adA75fc1697fD342d99eed947a3aA5E", abi: aggregatorV3InterfaceAbi } as const;

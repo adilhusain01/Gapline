@@ -1,14 +1,10 @@
+import { MAINNET_USDG, type StockSymbol, stocks } from "@gapline/abi";
 import { parseAbiItem } from "viem";
 
 import { mainnet } from "./chain";
 
-/**
- * Uniswap v3 TSLA / USDG pool on Robinhood Chain mainnet (0.3% tier, the deepest v3 pool; ~$660K on 2026-09-23).
- * token0 = TSLA stock token (18 decimals), token1 = USDG (6 decimals).
- */
-export const TSLA_USDG_V3_POOL = "0xf4ACdAEEB7022862A763C9B1B885e11191c889E3" as const;
-export const MAINNET_TSLA_TOKEN = "0x322F0929c4625eD5bAd873c95208D54E1c003b2d" as const;
-export const MAINNET_USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" as const;
+// Each stock's deepest Uniswap v3 pool against USDG on mainnet (MAINNET_STOCKS in @gapline/abi):
+// TSLA/USDG 0.3% (~$660K) and AMZN/USDG 0.3% (~$869K) on 2026-09-23. token0 = stock (18 dec), token1 = USDG (6 dec).
 
 const slot0Abi = [
   {
@@ -31,15 +27,15 @@ const swapEvent = parseAbiItem(
   "event Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)",
 );
 
-/** USDG per TSLA from a v3 sqrtPriceX96 (token1 per token0, adjusted for 18 vs 6 decimals). */
+/** USDG per stock token from a v3 sqrtPriceX96 (token1 per token0, adjusted for 18 vs 6 decimals). */
 export function priceFromSqrt(sqrtPriceX96: bigint) {
   const ratio = Number(sqrtPriceX96) / 2 ** 96;
   return ratio * ratio * 1e12;
 }
 
 /** The pool's price right now. */
-export async function dexPriceNow() {
-  const [sqrtPriceX96] = await mainnet.readContract({ address: TSLA_USDG_V3_POOL, abi: slot0Abi, functionName: "slot0" });
+export async function dexPriceNow(symbol: StockSymbol) {
+  const [sqrtPriceX96] = await mainnet.readContract({ address: stocks[symbol].usdgPool, abi: slot0Abi, functionName: "slot0" });
   return priceFromSqrt(sqrtPriceX96);
 }
 
@@ -61,14 +57,14 @@ export async function blockAt(timestamp: bigint) {
  * The pool's price at `timestamp`: the post-swap price of the last swap before it.
  * The public node keeps no historical state, but it serves logs. Searches back up to `lookbackBlocks`.
  */
-export async function dexPriceAt(timestamp: bigint, lookbackBlocks = 400_000n) {
+export async function dexPriceAt(symbol: StockSymbol, timestamp: bigint, lookbackBlocks = 400_000n) {
   const end = await blockAt(timestamp);
   // The public node times out on wide log queries; start small and halve on failure.
   let chunk = 5_000n;
   for (let to = end; to > end - lookbackBlocks && to > 0n; ) {
     const from = to > chunk ? to - chunk + 1n : 1n;
     const logs = await mainnet
-      .getLogs({ address: TSLA_USDG_V3_POOL, event: swapEvent, fromBlock: from, toBlock: to })
+      .getLogs({ address: stocks[symbol].usdgPool, event: swapEvent, fromBlock: from, toBlock: to })
       .catch(() => undefined);
     if (!logs) {
       if (chunk <= 250n) throw new Error(`log query keeps timing out near block ${to}`);
@@ -93,13 +89,14 @@ const erc20BalanceAbi = [
  * The live weekend signal. `usable` is false when the pool is too thin or prints too far from Friday's close to
  * trust; depth filtering keeps a thin pool's fake print (e.g. a $1,153 NVDA pool against a $218 stock) out.
  */
-export async function dexSignal(fridayClose: number, minTvlUsd: number, maxDeviationPct: number) {
-  const [price, tsla, usdg] = await Promise.all([
-    dexPriceNow(),
-    mainnet.readContract({ address: MAINNET_TSLA_TOKEN, abi: erc20BalanceAbi, functionName: "balanceOf", args: [TSLA_USDG_V3_POOL] }),
-    mainnet.readContract({ address: MAINNET_USDG, abi: erc20BalanceAbi, functionName: "balanceOf", args: [TSLA_USDG_V3_POOL] }),
+export async function dexSignal(symbol: StockSymbol, fridayClose: number, minTvlUsd: number, maxDeviationPct: number) {
+  const { token, usdgPool } = stocks[symbol];
+  const [price, stockHeld, usdg] = await Promise.all([
+    dexPriceNow(symbol),
+    mainnet.readContract({ address: token, abi: erc20BalanceAbi, functionName: "balanceOf", args: [usdgPool] }),
+    mainnet.readContract({ address: MAINNET_USDG, abi: erc20BalanceAbi, functionName: "balanceOf", args: [usdgPool] }),
   ]);
-  const tvlUsd = (Number(tsla) / 1e18) * price + Number(usdg) / 1e6;
+  const tvlUsd = (Number(stockHeld) / 1e18) * price + Number(usdg) / 1e6;
   const gapPct = (price / fridayClose - 1) * 100;
   const usable = tvlUsd >= minTvlUsd && Math.abs(gapPct) <= maxDeviationPct;
   return { price, tvlUsd, gapPct, usable };
