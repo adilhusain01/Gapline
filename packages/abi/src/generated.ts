@@ -56,9 +56,6 @@ export const aggregatorV3InterfaceAbi = [
 // GapGuardedLendingPool
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xBB924f325a7cDb1D53E514cB9691E3a19e26F6d1)
- */
 export const gapGuardedLendingPoolAbi = [
   {
     type: 'constructor',
@@ -464,27 +461,12 @@ export const gapGuardedLendingPoolAbi = [
   },
 ] as const
 
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xBB924f325a7cDb1D53E514cB9691E3a19e26F6d1)
- */
-export const gapGuardedLendingPoolAddress = {
-  46630: '0xBB924f325a7cDb1D53E514cB9691E3a19e26F6d1',
-} as const
-
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xBB924f325a7cDb1D53E514cB9691E3a19e26F6d1)
- */
-export const gapGuardedLendingPoolConfig = {
-  address: gapGuardedLendingPoolAddress,
-  abi: gapGuardedLendingPoolAbi,
-} as const
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GapMarket
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x5f2d5F54e28002a9b06100532a1EE9B9ad5e479e)
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xd377e56A0C8DEC0a404D7F06Ad96ccbaA4d1d73b)
  */
 export const gapMarketAbi = [
   {
@@ -496,6 +478,7 @@ export const gapMarketAbi = [
         internalType: 'contract MarketCalendar',
         type: 'address',
       },
+      { name: 'math_', internalType: 'contract ILmsrMath', type: 'address' },
       { name: 'feeBps_', internalType: 'uint256', type: 'uint256' },
     ],
     stateMutability: 'nonpayable',
@@ -675,9 +658,18 @@ export const gapMarketAbi = [
   },
   {
     type: 'function',
+    inputs: [],
+    name: 'math',
+    outputs: [
+      { name: '', internalType: 'contract ILmsrMath', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     inputs: [{ name: 'marketId', internalType: 'uint256', type: 'uint256' }],
     name: 'prices',
-    outputs: [{ name: 'p', internalType: 'uint256[]', type: 'uint256[]' }],
+    outputs: [{ name: '', internalType: 'uint256[]', type: 'uint256[]' }],
     stateMutability: 'view',
   },
   {
@@ -1118,56 +1110,6 @@ export const gapMarketAbi = [
   { type: 'error', inputs: [], name: 'NotCreator' },
   { type: 'error', inputs: [], name: 'NotFirstRoundAfterReopen' },
   { type: 'error', inputs: [], name: 'NotResolved' },
-  {
-    type: 'error',
-    inputs: [
-      { name: 'x', internalType: 'uint256', type: 'uint256' },
-      { name: 'y', internalType: 'uint256', type: 'uint256' },
-    ],
-    name: 'PRBMath_MulDiv18_Overflow',
-  },
-  {
-    type: 'error',
-    inputs: [
-      { name: 'x', internalType: 'uint256', type: 'uint256' },
-      { name: 'y', internalType: 'uint256', type: 'uint256' },
-      { name: 'denominator', internalType: 'uint256', type: 'uint256' },
-    ],
-    name: 'PRBMath_MulDiv_Overflow',
-  },
-  { type: 'error', inputs: [], name: 'PRBMath_SD59x18_Div_InputTooSmall' },
-  {
-    type: 'error',
-    inputs: [
-      { name: 'x', internalType: 'SD59x18', type: 'int256' },
-      { name: 'y', internalType: 'SD59x18', type: 'int256' },
-    ],
-    name: 'PRBMath_SD59x18_Div_Overflow',
-  },
-  {
-    type: 'error',
-    inputs: [{ name: 'x', internalType: 'SD59x18', type: 'int256' }],
-    name: 'PRBMath_SD59x18_Exp2_InputTooBig',
-  },
-  {
-    type: 'error',
-    inputs: [{ name: 'x', internalType: 'SD59x18', type: 'int256' }],
-    name: 'PRBMath_SD59x18_Exp_InputTooBig',
-  },
-  {
-    type: 'error',
-    inputs: [{ name: 'x', internalType: 'SD59x18', type: 'int256' }],
-    name: 'PRBMath_SD59x18_Log_InputTooSmall',
-  },
-  { type: 'error', inputs: [], name: 'PRBMath_SD59x18_Mul_InputTooSmall' },
-  {
-    type: 'error',
-    inputs: [
-      { name: 'x', internalType: 'SD59x18', type: 'int256' },
-      { name: 'y', internalType: 'SD59x18', type: 'int256' },
-    ],
-    name: 'PRBMath_SD59x18_Mul_Overflow',
-  },
   { type: 'error', inputs: [], name: 'ReentrancyGuardReentrantCall' },
   {
     type: 'error',
@@ -1199,14 +1141,14 @@ export const gapMarketAbi = [
 ] as const
 
 /**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x5f2d5F54e28002a9b06100532a1EE9B9ad5e479e)
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xd377e56A0C8DEC0a404D7F06Ad96ccbaA4d1d73b)
  */
 export const gapMarketAddress = {
-  46630: '0x5f2d5F54e28002a9b06100532a1EE9B9ad5e479e',
+  46630: '0xd377e56A0C8DEC0a404D7F06Ad96ccbaA4d1d73b',
 } as const
 
 /**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x5f2d5F54e28002a9b06100532a1EE9B9ad5e479e)
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xd377e56A0C8DEC0a404D7F06Ad96ccbaA4d1d73b)
  */
 export const gapMarketConfig = {
   address: gapMarketAddress,
@@ -1337,12 +1279,66 @@ export const ierc20MetadataAbi = [
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ImpliedPriceOracle
+// ILmsrMath
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xeB246817d2440F82F4B4C04c2C120afEFe1E5EC4)
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x4B4909452B47daEaD2303d2072D74C5474E00178)
  */
+export const iLmsrMathAbi = [
+  {
+    type: 'function',
+    inputs: [
+      { name: 'liquidity', internalType: 'int256', type: 'int256' },
+      { name: 'shares', internalType: 'int256[]', type: 'int256[]' },
+    ],
+    name: 'cost',
+    outputs: [{ name: '', internalType: 'int256', type: 'int256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'liquidity', internalType: 'int256', type: 'int256' },
+      { name: 'shares', internalType: 'int256[]', type: 'int256[]' },
+      { name: 'outcome', internalType: 'uint8', type: 'uint8' },
+      { name: 'delta', internalType: 'int256', type: 'int256' },
+    ],
+    name: 'costDelta',
+    outputs: [{ name: '', internalType: 'int256', type: 'int256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'liquidity', internalType: 'int256', type: 'int256' },
+      { name: 'shares', internalType: 'int256[]', type: 'int256[]' },
+    ],
+    name: 'prices',
+    outputs: [{ name: '', internalType: 'uint256[]', type: 'uint256[]' }],
+    stateMutability: 'view',
+  },
+] as const
+
+/**
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x4B4909452B47daEaD2303d2072D74C5474E00178)
+ */
+export const iLmsrMathAddress = {
+  46630: '0x4B4909452B47daEaD2303d2072D74C5474E00178',
+} as const
+
+/**
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x4B4909452B47daEaD2303d2072D74C5474E00178)
+ */
+export const iLmsrMathConfig = {
+  address: iLmsrMathAddress,
+  abi: iLmsrMathAbi,
+} as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ImpliedPriceOracle
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 export const impliedPriceOracleAbi = [
   {
     type: 'constructor',
@@ -1534,27 +1530,12 @@ export const impliedPriceOracleAbi = [
   { type: 'error', inputs: [], name: 'WrongFeed' },
 ] as const
 
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xeB246817d2440F82F4B4C04c2C120afEFe1E5EC4)
- */
-export const impliedPriceOracleAddress = {
-  46630: '0xeB246817d2440F82F4B4C04c2C120afEFe1E5EC4',
-} as const
-
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xeB246817d2440F82F4B4C04c2C120afEFe1E5EC4)
- */
-export const impliedPriceOracleConfig = {
-  address: impliedPriceOracleAddress,
-  abi: impliedPriceOracleAbi,
-} as const
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MarketCalendar
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x4897cA16aF49F84D689b59Be81abD9C0C760280f)
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xaDE663AE3cDEC75D6918e172d541E0C9F14E3121)
  */
 export const marketCalendarAbi = [
   {
@@ -1686,14 +1667,14 @@ export const marketCalendarAbi = [
 ] as const
 
 /**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x4897cA16aF49F84D689b59Be81abD9C0C760280f)
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xaDE663AE3cDEC75D6918e172d541E0C9F14E3121)
  */
 export const marketCalendarAddress = {
-  46630: '0x4897cA16aF49F84D689b59Be81abD9C0C760280f',
+  46630: '0xaDE663AE3cDEC75D6918e172d541E0C9F14E3121',
 } as const
 
 /**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x4897cA16aF49F84D689b59Be81abD9C0C760280f)
+ * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0xaDE663AE3cDEC75D6918e172d541E0C9F14E3121)
  */
 export const marketCalendarConfig = {
   address: marketCalendarAddress,
@@ -1704,9 +1685,6 @@ export const marketCalendarConfig = {
 // MirroredFeed
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x284a56BFBa8D03b662A23f4788bD458f835058f5)
- */
 export const mirroredFeedAbi = [
   {
     type: 'constructor',
@@ -1860,18 +1838,3 @@ export const mirroredFeedAbi = [
   },
   { type: 'error', inputs: [], name: 'RoundNotFound' },
 ] as const
-
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x284a56BFBa8D03b662A23f4788bD458f835058f5)
- */
-export const mirroredFeedAddress = {
-  46630: '0x284a56BFBa8D03b662A23f4788bD458f835058f5',
-} as const
-
-/**
- * [__View Contract on Robinhood Chain Testnet Blockscout__](https://explorer.testnet.chain.robinhood.com/address/0x284a56BFBa8D03b662A23f4788bD458f835058f5)
- */
-export const mirroredFeedConfig = {
-  address: mirroredFeedAddress,
-  abi: mirroredFeedAbi,
-} as const
