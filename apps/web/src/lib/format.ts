@@ -55,14 +55,6 @@ export function countdown(seconds: number) {
 	return `${m}m ${Math.floor(seconds % 60)}s`;
 }
 
-export function timeAgo(timestamp: bigint | number) {
-	const seconds = Math.max(
-		0,
-		Math.round(Date.now() / 1000 - Number(timestamp)),
-	);
-	return `${countdown(seconds)} ago`;
-}
-
 /** A timestamp in the market's own clock, e.g. "Fri 20:00 ET". */
 export function marketTime(timestamp: bigint | number) {
 	const text = new Date(Number(timestamp) * 1000).toLocaleString("en-US", {

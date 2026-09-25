@@ -168,6 +168,7 @@ flowchart LR
 - Borrow page: gap-aware pricing banner, Protect my loan (cover sized to 10/25/50% of debt), the pool's own cover
 - Footer links GapMarket, the LmsrMath Stylus program and the selected stock's oracle and pool
 - Checked with Playwright screenshots on 2026-09-22 in weekday, Saturday (fork) and settled Monday (fork) states
+- Live numbers refresh in place: reads taking 'now' key on a shared 15 s clock (lib/clock.ts), refetches keep the last result scoped per stock, countdown and 'feed updated ... ago' re-render only themselves once a second. Playwright on 2026-09-24, 40 s on the market page: 0 skeleton swaps (7 before the fix), the time readouts updated 40 times (9 before)
 
 ## Externals
 

@@ -8,12 +8,15 @@ import {
 	marketCalendarAddress,
 	mirroredFeedAbi,
 	robinhoodTestnet,
+	type StockSymbol,
 	stocks,
 } from "@gapline/abi";
+import { keepPreviousData } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { erc20Abi } from "viem";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 
+import { useNow } from "@/lib/clock";
 import { useUi } from "@/lib/store";
 
 const chainId = robinhoodTestnet.id;
@@ -35,6 +38,21 @@ const market = {
 	abi: gapMarketAbi,
 	chainId,
 } as const;
+
+/**
+ * Query options that keep showing a read's last result while its arguments move (a new time step, a new feed
+ * round), so a refresh updates numbers in place instead of dropping back to a loading state. Never carries one
+ * stock's numbers over to another.
+ */
+function keepWithinStock(symbol: StockSymbol) {
+	return {
+		meta: { stock: symbol },
+		placeholderData: <T>(
+			previous: T | undefined,
+			query: { meta?: Record<string, unknown> } | undefined,
+		) => (query?.meta?.stock === symbol ? previous : undefined),
+	};
+}
 
 /** The stock picked in the header, with its testnet feed, oracle, lending pool and token. */
 export function useStock() {
@@ -70,8 +88,8 @@ export type PriceBand = {
 
 /** Session state, the stock's live feed round and the price its oracle is publishing right now. */
 export function useSessionStatus() {
-	const { feed, oracle } = useStock();
-	const now = BigInt(Math.floor(Date.now() / 1000));
+	const { symbol, feed, oracle } = useStock();
+	const now = BigInt(useNow(15));
 	const query = useReadContracts({
 		contracts: [
 			{ ...calendar, functionName: "isOpen", args: [now] },
@@ -83,6 +101,7 @@ export function useSessionStatus() {
 			{ ...oracle, functionName: "activeMarketId" },
 			{ ...oracle, functionName: "hasActiveMarket" },
 		],
+		query: keepWithinStock(symbol),
 	});
 
 	const [
@@ -127,11 +146,12 @@ export function useSessionStatus() {
  * isOpen, so read the next week of boundaries and take the first one that is closed.
  */
 export function useNextClose() {
-	const now = BigInt(Math.floor(Date.now() / 1000));
+	const now = BigInt(useNow(15));
 	const day = useReadContract({
 		...calendar,
 		functionName: "tradingDayOf",
 		args: [now],
+		query: { placeholderData: keepPreviousData },
 	});
 	const boundaries = useReadContracts({
 		contracts: Array.from({ length: 8 }, (_, k) => ({
@@ -139,7 +159,10 @@ export function useNextClose() {
 			functionName: "sessionStart" as const,
 			args: [(day.data ?? 0n) + BigInt(k + 1)],
 		})),
-		query: { enabled: day.data !== undefined },
+		query: {
+			enabled: day.data !== undefined,
+			placeholderData: keepPreviousData,
+		},
 	});
 	const starts = (boundaries.data ?? [])
 		.map((b) => b.result as bigint | undefined)
@@ -150,7 +173,7 @@ export function useNextClose() {
 			functionName: "isOpen" as const,
 			args: [ts],
 		})),
-		query: { enabled: starts.length > 0 },
+		query: { enabled: starts.length > 0, placeholderData: keepPreviousData },
 	});
 	const firstClosed = open.data?.findIndex((r) => r.result === false) ?? -1;
 	return firstClosed >= 0 ? starts[firstClosed] : undefined;
@@ -192,7 +215,8 @@ export function useMarkets() {
 			{ ...market, functionName: "prices", args: [id] },
 			{ ...market, functionName: "impliedMove", args: [id] },
 		]),
-		query: { enabled: ids.length > 0 },
+		// Market ids are global, so the previous list stays valid while a new market loads.
+		query: { enabled: ids.length > 0, placeholderData: keepPreviousData },
 	});
 
 	const markets: MarketView[] = useMemo(() => {
@@ -381,7 +405,7 @@ export function useShareBalances(
  * Walks back from the latest round, which on a mirrored feed is a handful of entries.
  */
 export function useSettlementRound(market: MarketView | undefined) {
-	const { feed } = useStock();
+	const { symbol, feed } = useStock();
 	const latest = useReadContract({
 		...feed,
 		functionName: "latestRound",
@@ -403,18 +427,23 @@ export function useSettlementRound(market: MarketView | undefined) {
 			functionName: "getRoundData" as const,
 			args: [round],
 		})),
-		query: { enabled: candidates.length > 0 && Boolean(market) },
+		query: {
+			enabled: candidates.length > 0 && Boolean(market),
+			...keepWithinStock(symbol),
+		},
 	});
 
 	return useMemo(() => {
 		if (!market || !rounds.data) return undefined;
-		for (let i = 0; i < candidates.length; i++) {
-			const result = rounds.data[i]?.result as readonly bigint[] | undefined;
+		// Read the round id from each result: while a new window loads, the previous window's results stand in,
+		// so positions do not line up with `candidates`.
+		for (const entry of rounds.data) {
+			const result = entry.result as readonly bigint[] | undefined;
 			if (!result) continue;
-			if (result[3] >= market.reopenTs) return candidates[i];
+			if (result[3] >= market.reopenTs) return result[0];
 		}
 		return undefined;
-	}, [market, rounds.data, candidates]);
+	}, [market, rounds.data]);
 }
 
 export {

@@ -64,6 +64,11 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   OpenZeppelin, Chainlink). Frontend: TanStack Router + Query, shadcn/ui, Tailwind classes inline in JSX (never
   in .css files beyond the theme), zustand for client state, lucide icons (picked via `better-icons`), no emojis
   anywhere, one light/dark theme from `src/styles.css`.
+- Live data refreshes in place, never the whole page: skeletons only on a query's first load; a read whose
+  arguments move keeps its last result (`placeholderData: keepPreviousData`, or `keepWithinStock` in
+  `lib/gapline.ts` for per-stock reads so one stock's numbers never show under another); reads that take "now"
+  key on `useNow(step)` from `lib/clock.ts`, never `Date.now()` in render; ticking times are the `Countdown` and
+  `TimeAgo` components, which re-render only themselves.
 - Adding a stock: add it to `stocks()` in `Deploy.s.sol` and `MAINNET_STOCKS` in `packages/abi/src/index.ts`
   (mainnet feed, token, deepest Uniswap v3 USDG pool with the stock as token0), deploy, `npm run abi`, run its
   backtest and add its fit to `stockOverrides` in `apps/agent/src/config.ts`. Everything else loops over stocks.

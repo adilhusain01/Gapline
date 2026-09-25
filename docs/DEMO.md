@@ -49,7 +49,8 @@ README "Running it") with the explorer in a second tab.
 
 **Saturday (market live), about 2 minutes**
 
-1. Header pill reads "Gap-implied price". Price panel: implied TSLA price, the band, "reopens in".
+1. Header pill reads "Gap-implied price". Price panel: implied TSLA price, the band, "reopens in" (counts down live;
+   prices refresh in place every 12 s).
    Switch the header's stock picker to AMZN and back: each stock has its own market, oracle and pool.
 2. Market card: the seven ranges with probabilities, "oracle source" badge. Point at the agent's trades in
    `logs/agent.log` next to the range bars moving.

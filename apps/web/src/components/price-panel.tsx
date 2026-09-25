@@ -1,5 +1,7 @@
 import { Activity, Clock, TrendingDown, TrendingUp } from "lucide-react";
+import type { ReactNode } from "react";
 
+import { Countdown, TimeAgo } from "@/components/live-time";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -7,14 +9,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-	bpsToPercent,
-	countdown,
-	marketTime,
-	percent,
-	timeAgo,
-	usd,
-} from "@/lib/format";
+import { bpsToPercent, marketTime, percent, usd } from "@/lib/format";
 import {
 	type MarketView,
 	useNextClose,
@@ -28,7 +23,7 @@ function Stat({
 	hint,
 }: {
 	label: string;
-	value: string;
+	value: ReactNode;
 	hint?: string;
 }) {
 	return (
@@ -44,7 +39,6 @@ export function PricePanel({ active }: { active?: MarketView }) {
 	const status = useSessionStatus();
 	const stock = useStock();
 	const nextClose = useNextClose();
-	const now = Math.floor(Date.now() / 1000);
 
 	if (status.isLoading || status.isOpen === undefined) {
 		return <Skeleton className="h-44 w-full" />;
@@ -81,7 +75,11 @@ export function PricePanel({ active }: { active?: MarketView }) {
 					) : (
 						<p className="text-xs text-muted-foreground">
 							feed updated{" "}
-							{status.feedUpdatedAt ? timeAgo(status.feedUpdatedAt) : "--"}
+							{status.feedUpdatedAt ? (
+								<TimeAgo from={status.feedUpdatedAt} />
+							) : (
+								"--"
+							)}
 						</p>
 					)}
 				</div>
@@ -113,11 +111,15 @@ export function PricePanel({ active }: { active?: MarketView }) {
 				<Stat
 					label={status.isOpen ? "Session closes in" : "Session reopens in"}
 					value={
-						status.isOpen
-							? nextClose
-								? countdown(Number(nextClose) - now)
-								: "--"
-							: countdown(Number(status.nextOpen ?? 0n) - now)
+						status.isOpen ? (
+							nextClose ? (
+								<Countdown to={nextClose} />
+							) : (
+								"--"
+							)
+						) : (
+							<Countdown to={status.nextOpen ?? 0n} />
+						)
 					}
 					hint={
 						status.isOpen
