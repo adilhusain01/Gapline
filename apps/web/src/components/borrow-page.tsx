@@ -21,6 +21,12 @@ import {
 } from "@/lib/gapline";
 import { useTx } from "@/lib/useTx";
 
+/**
+ * Demo limit on each wallet's debt in each pool (TSLA and AMZN each hold ~110 USDG). The contract allows up to
+ * 50% loan-to-value; the app caps borrowing here so a few testers cannot drain a pool.
+ */
+const BORROW_CAP = parseUnits("5", 6);
+
 function Row({
 	label,
 	value,
@@ -72,6 +78,26 @@ export function BorrowPage() {
 
 	const implied = status.band?.implied ?? false;
 	const paused = position.pricingPaused;
+
+	// What a borrow can actually get: the contract's limit, the demo cap and the pool's cash, whichever is least.
+	const capLeft =
+		BORROW_CAP > (position.debt ?? 0n)
+			? BORROW_CAP - (position.debt ?? 0n)
+			: 0n;
+	const limits = [
+		position.maxBorrow ?? 0n,
+		capLeft,
+		position.poolReserves ?? 0n,
+	];
+	const borrowable = limits.reduce((a, b) => (b < a ? b : a));
+	const borrowBlocked =
+		!isConnected || paused || borrowAmount <= borrowable
+			? undefined
+			: borrowAmount > capLeft
+				? `Over the demo limit: you can borrow ${usdg(capLeft)} more in this pool.`
+				: borrowAmount > (position.poolReserves ?? 0n)
+					? `The pool has ${usdg(position.poolReserves)} to lend right now.`
+					: `Over your borrowing power: deposit more ${stock.symbol} first.`;
 
 	async function deposit() {
 		if (wallet.stockAllowance < collateralAmount) {
@@ -193,13 +219,28 @@ export function BorrowPage() {
 								onChange={(event) => setBorrow(event.target.value)}
 								className="font-mono"
 							/>
-							<p className="text-xs text-muted-foreground">
-								Available {paused ? "paused" : usdg(position.maxBorrow)}
-							</p>
+							<div className="space-y-0.5 text-xs text-muted-foreground">
+								<p>
+									Borrowing power {paused ? "paused" : usdg(position.maxBorrow)}
+								</p>
+								<p>
+									You can borrow {paused ? "--" : usdg(borrowable)} (demo limit{" "}
+									{usdg(BORROW_CAP, 0)} per wallet)
+								</p>
+								{borrowBlocked ? (
+									<p className="text-destructive">{borrowBlocked}</p>
+								) : null}
+							</div>
 							<div className="flex gap-2">
 								<Button
 									className="flex-1"
-									disabled={!isConnected || paused || Boolean(pending)}
+									disabled={
+										!isConnected ||
+										paused ||
+										Boolean(pending) ||
+										borrowAmount === 0n ||
+										Boolean(borrowBlocked)
+									}
 									onClick={() =>
 										send(`Borrow ${borrow} USDG`, {
 											address: stock.pool.address,

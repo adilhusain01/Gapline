@@ -348,10 +348,17 @@ export function usePosition() {
 		contracts: [
 			{ ...pool, functionName: "riskPrice" },
 			{ ...pool, functionName: "liquidationPrice" },
+			{
+				address: addresses.usdg,
+				abi: erc20Abi,
+				chainId,
+				functionName: "balanceOf",
+				args: [pool.address],
+			},
 		],
 	});
 	const [collateral, debt, maxBorrow, liquidatable] = query.data ?? [];
-	const [riskPrice, liquidationPrice] = prices.data ?? [];
+	const [riskPrice, liquidationPrice, reserves] = prices.data ?? [];
 	return {
 		...query,
 		collateral: collateral?.result as bigint | undefined,
@@ -362,6 +369,8 @@ export function usePosition() {
 		liquidationPrice: liquidationPrice?.result as bigint | undefined,
 		/** riskPrice reverts while pricing is paused; surface that instead of a number. */
 		pricingPaused: riskPrice?.status === "failure",
+		/** USDG the pool holds and can lend right now. */
+		poolReserves: reserves?.result as bigint | undefined,
 	};
 }
 

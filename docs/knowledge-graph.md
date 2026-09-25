@@ -132,6 +132,7 @@ flowchart LR
 - Pauses both when the feed is frozen and no market prices it
 - hedge(marketId) buys worst-range cover paying 10% of totalDebt for at most 1% of it, once per market; collectHedge redeems
 - Max LTV 50%, liquidation threshold 70%, bonus 5%
+- 2026-09-24: each v3 pool topped up to 110 USDG from the deployer; borrow reverts InsufficientLiquidity above the pool's cash
 
 ### LmsrMath (Stylus)
 
@@ -178,6 +179,7 @@ flowchart LR
 - Live numbers refresh in place: reads taking 'now' key on a shared 15 s clock (lib/clock.ts), refetches keep the last result scoped per stock, countdown and 'feed updated ... ago' re-render only themselves once a second. Playwright on 2026-09-24, 40 s on the market page: 0 skeleton swaps (7 before the fix), the time readouts updated 40 times (9 before)
 - Wallet stays connected across reloads (wagmi localStorage + reconnectOnMount), shows Reconnecting meanwhile, lists EIP-6963 wallets; checked 2026-09-24 with Playwright and a mock injected wallet on /app and /app/borrow
 - Visual identity since 2026-09-24: navy and amber theme, IBM Plex Sans and Mono; designed with the frontend-design skill and copy edited with the humanizer skill
+- Borrow page caps each wallet at 5 USDG of debt per pool (app-side), shows borrowing power beside it, and explains a blocked borrow (demo cap, pool cash or LTV)
 
 ### Demo controller
 

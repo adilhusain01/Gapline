@@ -31,7 +31,7 @@ cast balance 0x610FdB41DA83138615C317c89fd9EB09271a46fe --ether --rpc-url https:
   faucet.testnet.chain.robinhood.com and faucet.paxos.com if needed.
 - Before Friday's close, open a small loan on each stock so each pool has something to insure: on the Borrow
   page pick TSLA, deposit 1 and borrow about 5 USDG; then the same for AMZN. The keeper sizes each pool's cover to
-  its outstanding loans. (Each pool holds 10 USDG.)
+  its outstanding loans. (Each pool holds 110 USDG; the app caps each wallet at 5 USDG of debt per pool.)
 - Friday afternoon, run the dress rehearsal once more: `scripts/rehearse-weekend.sh`. It plays the whole weekend
   for both stocks on a throwaway fork with the real agent and should end with the TSLA pool's reserves rising
   (cover paid out on the -3.5% reopen).

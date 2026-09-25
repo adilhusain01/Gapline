@@ -130,6 +130,11 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   slots 0-11 or the OpenZeppelin v5 namespaced slot). The web app picks its chain at page load from the path
   (`lib/wagmi.ts` `isDemo`), so links between `/demo` and the rest reload the page; the UI clock follows the fork
   through `setChainOffset` (`lib/clock.ts`), and trading/settle checks use `chainNow()`, never `Date.now()`.
+- Pools (2026-09-24): each v3 pool holds 110 USDG (10 at deploy + 100 from the deployer). `borrow` reverts with
+  `InsufficientLiquidity` above the pool's cash, which wallets report as "not enough ETH" because gas estimation
+  fails. The Borrow page caps each wallet's debt at 5 USDG per pool (`BORROW_CAP` in `components/borrow-page.tsx`,
+  app-side only; the contract allows 50% LTV), shows the full borrowing power beside it, and blocks a borrow over
+  the least of borrowing power, cap and pool cash with the reason.
 - `cast` parses negative numbers as flags: put options before `--` and arguments after it.
 - `createMarket` needs the feed's last update at or before the close and no more than 3 days older than it.
 - `oraclePaused()` (corporate actions) was not found on the feed or token contracts; the oracle treats a stale
