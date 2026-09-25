@@ -43,7 +43,9 @@ t=$now
 until [ "$(cast call $CAL 'isOpen(uint256)(bool)' $t --rpc-url $FORK)" = "false" ]; do t=$((t + 3600)); done
 CLOSE=$(cast call $CAL 'lastClose(uint256)(uint256)' $t --rpc-url $FORK | awk '{print $1}')
 REOPEN=$(cast call $CAL 'nextOpen(uint256)(uint256)' $t --rpc-url $FORK | awk '{print $1}')
-echo "closure: $(date -u -r "$CLOSE") -> $(date -u -r "$REOPEN")"
+# BSD date (macOS) takes -r <seconds>; GNU date (Linux) takes -d @<seconds>.
+utc() { date -u -r "$1" 2>/dev/null || date -u -d "@$1"; }
+echo "closure: $(utc "$CLOSE") -> $(utc "$REOPEN")"
 
 echo "== Friday: post the last pre-close price, fund each pool with 10 USDG, open a 5 USDG loan"
 LAST=$((CLOSE - 600))
