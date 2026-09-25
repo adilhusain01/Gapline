@@ -49,7 +49,8 @@ README "Running it"), with the explorer in a second tab.
 
 **Saturday (market live), about 2 minutes**
 
-0. Landing page (`/`): the live card shows TSLA and AMZN on "Weekend market" with their bands. "Launch app".
+0. Landing page (`/`): the weekend chart, then the live strip showing TSLA and AMZN "priced by the weekend market"
+   with their ranges. "Open the app".
 1. Header pill reads "Gap-implied price". Price panel: implied TSLA price, the band, "reopens in" (counts down live;
    prices refresh in place every 12 s).
    Switch the header's stock picker to AMZN and back: each stock has its own market, oracle and pool.
