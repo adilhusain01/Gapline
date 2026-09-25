@@ -140,6 +140,9 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   fails. The Borrow page caps each wallet's debt at 5 USDG per pool (`BORROW_CAP` in `components/borrow-page.tsx`,
   app-side only; the contract allows 50% LTV), shows the full borrowing power beside it, and blocks a borrow over
   the least of borrowing power, cap and pool cash with the reason.
+- GitGuardian's generic token detector flagged commits `6c93793` and `a6d06ef` (2026-09-25) for the TSLA and AMZN
+  stock tokens' public mainnet addresses, which follow the word "token" in the docs: false positives, listed in
+  `.gitguardian.yaml`. The full history was checked for the deployer key, `.env`, API keys and bearer tokens: none.
 - `cast` parses negative numbers as flags: put options before `--` and arguments after it.
 - `createMarket` needs the feed's last update at or before the close and no more than 3 days older than it.
 - `oraclePaused()` (corporate actions) was not found on the feed or token contracts; the oracle treats a stale

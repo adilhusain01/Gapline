@@ -1,0 +1,11 @@
+# GitGuardian (dashboard and ggshield) configuration.
+# The generic token detector flags the Robinhood stock tokens' mainnet contract addresses because they follow the
+# word "token" in the docs. They are public contracts (name "Tesla • Robinhood Token" / "Amazon • Robinhood
+# Token" on Robinhood Chain mainnet), not credentials.
+version: 2
+secret:
+  ignored_matches:
+    - name: TSLA Robinhood Token contract address (public, Robinhood Chain mainnet)
+      match: 0x322F0929c4625eD5bAd873c95208D54E1c003b2d
+    - name: AMZN Robinhood Token contract address (public, Robinhood Chain mainnet)
+      match: 0x12f190a9F9d7D37a250758b26824B97CE941bF54
