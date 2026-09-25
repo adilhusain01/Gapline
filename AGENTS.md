@@ -117,12 +117,15 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   16; per extra range ~4.2K vs ~9.1K gas. `opt-level "z"` only shrinks it to 18.8 KB. Anvil and forge forks cannot
   run Stylus WASM (code starts `0xEFF000`): fork tests and the rehearsal etch `LmsrMathSol` over the address.
 - Host (since 2026-09-24): the Linux VPS `vps` (Ubuntu 24.04, Node 24, Foundry 1.5.1) runs everything under pm2,
-  restored at boot by `pm2-root.service`, and serves the web app publicly with `tailscale funnel --https=443
-  http://localhost:4173` at https://vps.tail865d46.ts.net. Run the relayer, agent and demo on exactly one machine:
+  restored at boot by `pm2-root.service`. The web app is public at **https://gapline.adilhusain.xyz** (Caddy site
+  in `/etc/caddy/Caddyfile`, next to other projects' sites: `reverse_proxy [::1]:4173`, Let's Encrypt certificate,
+  DNS `A gapline -> 13.140.56.191` and `AAAA -> 2400:d321:2360:5616::1` at Namecheap) and at
+  https://vps.tail865d46.ts.net (`tailscale funnel --https=443 http://localhost:4173`). Caddy binds the public
+  addresses only (`default_bind`), because tailscaled holds :443 on the tailnet addresses. Run the relayer, agent and demo on exactly one machine:
   they share the deployer key, and a second relayer would mirror every round twice (`mirror` rejects only older
   timestamps, not equal ones).
 - Serving: `vite preview` listens on `localhost` only (`[::1]` on Linux), so proxy `http://localhost:4173`, not
-  `127.0.0.1`; `preview.allowedHosts` admits `*.ts.net` (Vite rejects unknown Host headers); `preview.proxy`
+  `127.0.0.1`; `preview.allowedHosts` admits `*.ts.net` and `gapline.adilhusain.xyz` (Vite rejects unknown Host headers); `preview.proxy`
   forwards `/demo-api` to the demo controller on 127.0.0.1:4180.
 - Demo (`/demo`): the wallet is `0xb6E922A053A6FFAf3978048857Db69170196A9dB`, the last 20 bytes of
   keccak256("gapline demo wallet"), so no one holds its key; the fork impersonates it and funds it (100 USDG,

@@ -1,6 +1,6 @@
 # Knowledge graph
 
-Generated from `knowledge-graph.json` by `npm run kg` (last updated 2026-09-24). Edit the JSON, not this file.
+Generated from `knowledge-graph.json` by `npm run kg` (last updated 2026-09-25). Edit the JSON, not this file.
 
 ```mermaid
 flowchart LR
@@ -181,6 +181,7 @@ flowchart LR
 - Visual identity since 2026-09-24: navy and amber theme, IBM Plex Sans and Mono; designed with the frontend-design skill and copy edited with the humanizer skill
 - Borrow page caps each wallet at 5 USDG of debt per pool (app-side), shows borrowing power beside it, and explains a blocked borrow (demo cap, pool cash or LTV)
 - Landing explainer (2026-09-24): five-step weekend walkthrough on a client-side LMSR with the live parameters (buy a range, see the oracle band, the lender's collateral value and the Sunday payout), an architecture diagram of the seven pieces, and the safeguards; built with the frontend-design, diagram-design, dataviz and humanizer skills
+- Public URL https://gapline.adilhusain.xyz since 2026-09-25: Caddy on the VPS (Let's Encrypt, reverse_proxy [::1]:4173) beside other projects' sites; the Tailscale Funnel URL stays as a second entry
 
 ### Demo controller
 

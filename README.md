@@ -216,7 +216,8 @@ tailscale funnel --bg --https=443 http://localhost:4173   # public URL; `tailsca
 ```
 
 Run all of it on one machine: the relayer, agent and demo sign with the deployer key. The live deployment runs on
-a Linux VPS at https://vps.tail865d46.ts.net.
+a Linux VPS at **https://gapline.adilhusain.xyz** (Caddy with an automatic Let's Encrypt certificate, proxying to
+the web app on port 4173); https://vps.tail865d46.ts.net serves the same app through Tailscale Funnel.
 
 **Weekday demo.** A real market exists only while the feeds are frozen (Friday 20:00 ET to Sunday 20:00 ET).
 Any other day, `/demo` runs the same dashboard on a private fork of the testnet whose clock is on the next

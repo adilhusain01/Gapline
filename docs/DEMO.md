@@ -44,7 +44,7 @@ round it missed, in order.
 ## Demo on a weekday (`/demo`)
 
 A live market exists only from Friday 20:00 ET to Sunday 20:00 ET. Any other time, open
-https://vps.tail865d46.ts.net/demo (or "Try a demo weekend" on the landing page). It is the same dashboard on a
+https://gapline.adilhusain.xyz/demo (or "Try a demo weekend" on the landing page). It is the same dashboard on a
 private copy of the testnet with its clock on Saturday; the agent has opened both markets and keeps trading, and
 you trade as a funded demo wallet with no wallet extension.
 

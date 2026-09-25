@@ -14,9 +14,9 @@ const config = defineConfig({
 		tanstackRouter({ target: "react", autoCodeSplitting: true }),
 		viteReact(),
 	],
-	// `tailscale serve`/`funnel` proxies with the *.ts.net Host header; /demo-api is the demo controller (apps/demo)
+	// Served as gapline.adilhusain.xyz (Caddy) and *.ts.net (Tailscale Funnel); /demo-api is the demo controller (apps/demo)
 	preview: {
-		allowedHosts: [".ts.net"],
+		allowedHosts: [".ts.net", "gapline.adilhusain.xyz"],
 		proxy: { "/demo-api": "http://127.0.0.1:4180" },
 	},
 	server: { proxy: { "/demo-api": "http://127.0.0.1:4180" } },
