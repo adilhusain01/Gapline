@@ -1,6 +1,6 @@
 # Knowledge graph
 
-Generated from `knowledge-graph.json` by `npm run kg` (last updated 2026-09-23). Edit the JSON, not this file.
+Generated from `knowledge-graph.json` by `npm run kg` (last updated 2026-09-24). Edit the JSON, not this file.
 
 ```mermaid
 flowchart LR
@@ -162,7 +162,7 @@ flowchart LR
 ### Web app
 
 - apps/web, TanStack Router + Query, wagmi 3 injected connector, shadcn radix-nova, zustand
-- Served by pm2 at http://localhost:4173 (vite preview of the production build)
+- Served by pm2 at http://localhost:4173 (vite preview of the production build); shared over Tailscale Serve/Funnel by proxying http://localhost:4173, with preview.allowedHosts admitting *.ts.net
 - Header stock picker (TSLA / AMZN, persisted in zustand); every hook reads the selected stock's feed, oracle, pool and token
 - Market page: ranges, trade panel, cost to move the implied price 1% (client-side LMSR), underwriter fees
 - Borrow page: gap-aware pricing banner, Protect my loan (cover sized to 10/25/50% of debt), the pool's own cover

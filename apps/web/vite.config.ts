@@ -14,6 +14,8 @@ const config = defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
   ],
+  // `tailscale serve`/`funnel` proxies with the *.ts.net Host header
+  preview: { allowedHosts: ['.ts.net'] },
 })
 
 export default config

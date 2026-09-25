@@ -44,7 +44,8 @@ round it missed, in order.
 
 ## What to record
 
-Record the browser at http://localhost:4173 with the explorer in a second tab.
+Record the browser at http://localhost:4173 (or the Tailscale URL of the machine sharing the web app, see
+README "Running it") with the explorer in a second tab.
 
 **Saturday (market live), about 2 minutes**
 

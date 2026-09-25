@@ -99,6 +99,10 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   `LmsrMathSol` (`0x8223BBbe2d37e9623faE882888A97C55E2F95BFB`): `costDelta` +50% at 2 ranges, +6% at 7, -21% at
   16; per extra range ~4.2K vs ~9.1K gas. `opt-level "z"` only shrinks it to 18.8 KB. Anvil and forge forks cannot
   run Stylus WASM (code starts `0xEFF000`): fork tests and the rehearsal etch `LmsrMathSol` over the address.
+- Sharing the web app over Tailscale: `vite preview` listens on `localhost` only (`[::1]` on Linux), so proxy
+  `http://localhost:4173`, not `127.0.0.1`; `preview.allowedHosts` admits `*.ts.net` (Vite rejects unknown Host
+  headers). A machine that only serves the web app runs `pm2 start ecosystem.config.cjs --only web` (`awake` is
+  macOS `caffeinate`). Run the relayer and agent on exactly one machine: they share the deployer key.
 - `cast` parses negative numbers as flags: put options before `--` and arguments after it.
 - `createMarket` needs the feed's last update at or before the close and no more than 3 days older than it.
 - `oraclePaused()` (corporate actions) was not found on the feed or token contracts; the oracle treats a stale

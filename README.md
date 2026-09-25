@@ -211,6 +211,14 @@ npx pm2 start ecosystem.config.cjs    # relayer, agent, and the web app on http:
 npx pm2 logs                          # watch them
 ```
 
+To share the web app from another machine (for example a server), run only it there and put it behind Tailscale;
+the relayer and agent stay on the one machine already running them, since both sign with the deployer key:
+
+```bash
+npx pm2 start ecosystem.config.cjs --only web
+tailscale funnel --bg --https=443 http://localhost:4173   # public; `tailscale serve` keeps it tailnet-only
+```
+
 Deploying fresh contracts: `cd contracts && forge script script/Deploy.s.sol --rpc-url robinhood_testnet
 --private-key $PRIVATE_KEY --broadcast --verify --verifier blockscout
 --verifier-url https://explorer.testnet.chain.robinhood.com/api/`, then `npm run abi`.
