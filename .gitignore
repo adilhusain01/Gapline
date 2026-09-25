@@ -27,3 +27,17 @@ logs/
 
 # Rust / Stylus build output
 stylus/**/target/
+
+# Local agent/editor settings (per machine)
+.claude/settings.local.json
+*.local
+
+# Keys and certificates
+*.pem
+*.key
+id_*
+
+# Test coverage
+coverage/
+lcov.info
+contracts/coverage/
