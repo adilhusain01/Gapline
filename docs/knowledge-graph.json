@@ -98,11 +98,13 @@
         "apps/web, TanStack Router + Query, wagmi 3 injected connector, shadcn radix-nova, zustand",
         "Served by pm2 at http://localhost:4173 (vite preview of the production build); shared over Tailscale Serve/Funnel by proxying http://localhost:4173, with preview.allowedHosts admitting *.ts.net",
         "Header stock picker (TSLA / AMZN, persisted in zustand); every hook reads the selected stock's feed, oracle, pool and token",
-        "Market page: ranges, trade panel, cost to move the implied price 1% (client-side LMSR), underwriter fees",
-        "Borrow page: gap-aware pricing banner, Protect my loan (cover sized to 10/25/50% of debt), the pool's own cover",
+        "Landing page at /: hero, live card with both stocks' price, state and band, the weekend blind spot, how it works in four steps, what lenders get",
+        "Market page at /app: ranges, trade panel, cost to move the implied price 1% (client-side LMSR), underwriter fees; an empty state with a countdown to Friday's market",
+        "Borrow page at /app/borrow: gap-aware pricing banner, Protect my loan (cover sized to 10/25/50% of debt), the pool's own cover",
         "Footer links GapMarket, the LmsrMath Stylus program and the selected stock's oracle and pool",
         "Checked with Playwright screenshots on 2026-09-22 in weekday, Saturday (fork) and settled Monday (fork) states",
-        "Live numbers refresh in place: reads taking 'now' key on a shared 15 s clock (lib/clock.ts), refetches keep the last result scoped per stock, countdown and 'feed updated ... ago' re-render only themselves once a second. Playwright on 2026-09-24, 40 s on the market page: 0 skeleton swaps (7 before the fix), the time readouts updated 40 times (9 before)"
+        "Live numbers refresh in place: reads taking 'now' key on a shared 15 s clock (lib/clock.ts), refetches keep the last result scoped per stock, countdown and 'feed updated ... ago' re-render only themselves once a second. Playwright on 2026-09-24, 40 s on the market page: 0 skeleton swaps (7 before the fix), the time readouts updated 40 times (9 before)",
+        "Wallet stays connected across reloads (wagmi localStorage + reconnectOnMount), shows Reconnecting meanwhile, lists EIP-6963 wallets; checked 2026-09-24 with Playwright and a mock injected wallet on /app and /app/borrow"
       ]
     },
     {

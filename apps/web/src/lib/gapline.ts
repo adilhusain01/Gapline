@@ -54,29 +54,33 @@ function keepWithinStock(symbol: StockSymbol) {
 	};
 }
 
-/** The stock picked in the header, with its testnet feed, oracle, lending pool and token. */
-export function useStock() {
-	const symbol = useUi((state) => state.stock);
-	return useMemo(() => {
-		const stock = stocks[symbol];
-		const d = stock.testnet;
-		return {
-			symbol,
-			name: stock.name,
-			token: d.token,
-			feed: { address: d.feed, abi: mirroredFeedAbi, chainId } as const,
-			oracle: {
-				address: d.oracle,
-				abi: impliedPriceOracleAbi,
-				chainId,
-			} as const,
-			pool: {
-				address: d.lendingPool,
-				abi: gapGuardedLendingPoolAbi,
-				chainId,
-			} as const,
-		};
-	}, [symbol]);
+/** A stock's testnet feed, oracle, lending pool and token. */
+function stockContracts(symbol: StockSymbol) {
+	const stock = stocks[symbol];
+	const d = stock.testnet;
+	return {
+		symbol,
+		name: stock.name,
+		token: d.token,
+		feed: { address: d.feed, abi: mirroredFeedAbi, chainId } as const,
+		oracle: {
+			address: d.oracle,
+			abi: impliedPriceOracleAbi,
+			chainId,
+		} as const,
+		pool: {
+			address: d.lendingPool,
+			abi: gapGuardedLendingPoolAbi,
+			chainId,
+		} as const,
+	};
+}
+
+/** The stock picked in the header, or `symbol` when given (the landing page shows every stock at once). */
+export function useStock(symbol?: StockSymbol) {
+	const selected = useUi((state) => state.stock);
+	const active = symbol ?? selected;
+	return useMemo(() => stockContracts(active), [active]);
 }
 
 export type PriceBand = {
@@ -87,8 +91,8 @@ export type PriceBand = {
 };
 
 /** Session state, the stock's live feed round and the price its oracle is publishing right now. */
-export function useSessionStatus() {
-	const { symbol, feed, oracle } = useStock();
+export function useSessionStatus(stock?: StockSymbol) {
+	const { symbol, feed, oracle } = useStock(stock);
 	const now = BigInt(useNow(15));
 	const query = useReadContracts({
 		contracts: [

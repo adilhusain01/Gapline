@@ -22,7 +22,7 @@ import {
 } from "@/lib/gapline";
 import { useTx } from "@/lib/useTx";
 
-export const Route = createFileRoute("/lend")({ component: LendPage });
+export const Route = createFileRoute("/app/borrow")({ component: LendPage });
 
 function Row({
 	label,
@@ -112,7 +112,7 @@ function LendPage() {
 	}
 
 	return (
-		<div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+		<div className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
 			<Card>
 				<CardHeader className="space-y-1">
 					<CardTitle className="text-base font-medium">

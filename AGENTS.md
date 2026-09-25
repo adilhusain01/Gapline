@@ -22,7 +22,7 @@ pool consumes the band. Built for the Arbitrum Open House Singapore buildathon (
 | `packages/abi` | Typed ABIs, `stocks` table (mainnet feed/token/Uniswap pool + testnet contracts per stock), `stockByFeed` | `@wagmi/cli` foundry plugin, viem chains |
 | `apps/relayer` | Copies every mainnet RH<stock>/USD round to that stock's testnet MirroredFeed, one stock at a time | viem, tsx |
 | `apps/agent` | Keeper (open, point oracle, hedge, settle, redeem, sweep) + pricing agent with hard caps, per stock; optional Claude analyst | viem, @anthropic-ai/sdk, zod, @stdlib normal cdf |
-| `apps/web` | Market and Borrow pages; stock picker in the header (zustand `stock`) | TanStack Router + Query, wagmi 3 (injected connector), shadcn/ui (radix-nova), zustand, Tailwind v4 |
+| `apps/web` | Landing page at `/` (live TSLA/AMZN card, how it works); dashboard at `/app` (Market) and `/app/borrow` (Borrow) with the stock picker in its header (zustand `stock`) | TanStack Router + Query, wagmi 3 (injected connector), shadcn/ui (radix-nova), zustand, Tailwind v4 |
 | `ecosystem.config.cjs` | pm2: `awake` (caffeinate), `relayer`, `agent`, `web` (port 4173) | pm2 |
 | `docs/` | `DEMO.md` (weekend runbook, pitch, submission text), knowledge graph | |
 
@@ -69,6 +69,10 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   `lib/gapline.ts` for per-stock reads so one stock's numbers never show under another); reads that take "now"
   key on `useNow(step)` from `lib/clock.ts`, never `Date.now()` in render; ticking times are the `Countdown` and
   `TimeAgo` components, which re-render only themselves.
+- Wallet: wagmi's default localStorage storage plus `reconnectOnMount` keep the wallet connected across reloads;
+  `ConnectButton` shows "Reconnecting" meanwhile and lists EIP-6963 wallets when several are installed. Providers
+  sit in the root route so the landing page and the dashboard share one connection. Fonts are Geist and Geist
+  Mono (`@fontsource-variable`), set in the theme.
 - Adding a stock: add it to `stocks()` in `Deploy.s.sol` and `MAINNET_STOCKS` in `packages/abi/src/index.ts`
   (mainnet feed, token, deepest Uniswap v3 USDG pool with the stock as token0), deploy, `npm run abi`, run its
   backtest and add its fit to `stockOverrides` in `apps/agent/src/config.ts`. Everything else loops over stocks.

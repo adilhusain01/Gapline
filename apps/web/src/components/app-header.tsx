@@ -4,7 +4,9 @@ import {
 	type StockSymbol,
 } from "@gapline/abi";
 import { Link } from "@tanstack/react-router";
-import { Moon, Sun, Wallet } from "lucide-react";
+import { Loader2, Moon, Sun, Wallet } from "lucide-react";
+import { toast } from "sonner";
+import type { Connector } from "wagmi";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +33,10 @@ function SessionPill() {
 			? "border-destructive/40 bg-destructive/10 text-destructive"
 			: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
 	return (
-		<Badge variant="outline" className={`gap-1.5 font-medium ${tone}`}>
+		<Badge
+			variant="outline"
+			className={`hidden gap-1.5 font-medium md:inline-flex ${tone}`}
+		>
 			<span className="size-1.5 rounded-full bg-current" />
 			{implied ? "Gap-implied price" : isFeedFrozen ? "Feed frozen" : label}
 		</Badge>
@@ -57,21 +62,101 @@ function StockPicker() {
 	);
 }
 
-function ConnectButton() {
-	const { address, isConnected } = useAccount();
+export function ThemeToggle() {
+	const { theme, toggleTheme } = useUi();
+	return (
+		<Button
+			variant="ghost"
+			size="icon"
+			onClick={toggleTheme}
+			aria-label="Toggle theme"
+		>
+			{theme === "dark" ? (
+				<Sun className="size-4" />
+			) : (
+				<Moon className="size-4" />
+			)}
+		</Button>
+	);
+}
+
+/**
+ * Connects an injected wallet. wagmi remembers the last connector in localStorage and reconnects on load, so a
+ * refresh keeps the wallet connected; while that runs the button says so instead of offering to connect.
+ * With several wallets installed (EIP-6963), it lists them.
+ */
+export function ConnectButton() {
+	const { address, status } = useAccount();
 	const { connect, connectors, isPending } = useConnect();
 	const { disconnect } = useDisconnect();
 
-	if (!isConnected) {
-		const connector = connectors[0];
+	// The generic injected connector duplicates any wallet that announced itself through EIP-6963.
+	const wallets =
+		connectors.length > 1
+			? connectors.filter((c) => c.id !== "injected")
+			: connectors;
+
+	function connectTo(connector: Connector) {
+		connect(
+			{ connector },
+			{
+				onError: (error) =>
+					toast.error("Could not connect", {
+						description:
+							// Thrown with no injected wallet, though useConnect's error type omits it.
+							(error.name as string) === "ProviderNotFoundError"
+								? "No browser wallet found. Install one, or open this page in your wallet's browser."
+								: error.message.slice(0, 160),
+					}),
+			},
+		);
+	}
+
+	if (status === "reconnecting" || status === "connecting" || isPending) {
+		return (
+			<Button size="sm" variant="outline" disabled>
+				<Loader2 className="size-4 animate-spin" />
+				{status === "reconnecting" ? "Reconnecting" : "Connecting"}
+			</Button>
+		);
+	}
+
+	if (status === "disconnected") {
+		if (wallets.length > 1) {
+			return (
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button size="sm">
+							<Wallet className="size-4" />
+							Connect wallet
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						{wallets.map((connector) => (
+							<DropdownMenuItem
+								key={connector.uid}
+								onClick={() => connectTo(connector)}
+							>
+								{connector.icon ? (
+									<img src={connector.icon} alt="" className="size-4" />
+								) : (
+									<Wallet className="size-4" />
+								)}
+								{connector.name}
+							</DropdownMenuItem>
+						))}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			);
+		}
 		return (
 			<Button
 				size="sm"
-				disabled={isPending || !connector}
-				onClick={() => connector && connect({ connector })}
+				disabled={!wallets[0]}
+				onClick={() => wallets[0] && connectTo(wallets[0])}
 			>
 				<Wallet className="size-4" />
-				{isPending ? "Connecting" : "Connect wallet"}
+				Connect wallet
 			</Button>
 		);
 	}
@@ -102,48 +187,46 @@ function ConnectButton() {
 	);
 }
 
+export function Logo() {
+	return (
+		<Link to="/" className="flex items-center gap-2">
+			<span className="grid size-6 place-items-center rounded-md bg-primary text-primary-foreground">
+				<svg viewBox="0 0 16 16" className="size-3.5" aria-hidden="true">
+					<path
+						d="M1 11 L5 7 L7 9 M9 5 L11 7 L15 3"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="1.8"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+				</svg>
+			</span>
+			<span className="text-base font-semibold tracking-tight">Gapline</span>
+		</Link>
+	);
+}
+
+const navLink =
+	"rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground";
+
 export function AppHeader() {
-	const { theme, toggleTheme } = useUi();
 	return (
 		<header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-			<div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-4 px-4">
-				<Link to="/" className="flex items-baseline gap-2">
-					<span className="text-base font-semibold tracking-tight">
-						Gapline
-					</span>
-					<span className="hidden text-xs text-muted-foreground sm:inline">
-						weekend price for tokenized stocks
-					</span>
-				</Link>
-				<nav className="ml-2 flex items-center gap-1 text-sm">
-					<Link
-						to="/"
-						className="rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
-					>
+			<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
+				<Logo />
+				<nav className="flex items-center gap-1 text-sm">
+					<Link to="/app" activeOptions={{ exact: true }} className={navLink}>
 						Market
 					</Link>
-					<Link
-						to="/lend"
-						className="rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
-					>
+					<Link to="/app/borrow" className={navLink}>
 						Borrow
 					</Link>
 				</nav>
 				<StockPicker />
 				<div className="ml-auto flex items-center gap-2">
 					<SessionPill />
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={toggleTheme}
-						aria-label="Toggle theme"
-					>
-						{theme === "dark" ? (
-							<Sun className="size-4" />
-						) : (
-							<Moon className="size-4" />
-						)}
-					</Button>
+					<ThemeToggle />
 					<ConnectButton />
 				</div>
 			</div>

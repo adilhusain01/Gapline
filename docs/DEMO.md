@@ -44,11 +44,12 @@ round it missed, in order.
 
 ## What to record
 
-Record the browser at http://localhost:4173 (or the Tailscale URL of the machine sharing the web app, see
-README "Running it") with the explorer in a second tab.
+Record the browser at http://localhost:4173 (landing page; the dashboard is `/app`), or the Tailscale URL of the machine sharing the web app (see
+README "Running it"), with the explorer in a second tab.
 
 **Saturday (market live), about 2 minutes**
 
+0. Landing page (`/`): the live card shows TSLA and AMZN on "Weekend market" with their bands. "Launch app".
 1. Header pill reads "Gap-implied price". Price panel: implied TSLA price, the band, "reopens in" (counts down live;
    prices refresh in place every 12 s).
    Switch the header's stock picker to AMZN and back: each stock has its own market, oracle and pool.
