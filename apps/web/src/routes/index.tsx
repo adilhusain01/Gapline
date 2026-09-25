@@ -185,7 +185,8 @@ function Landing() {
 							<Link to="/app">Open the app</Link>
 						</Button>
 						<Button size="lg" variant="outline" asChild>
-							<a href="#how">How it works</a>
+							{/* A full page load: /demo connects to the demo chain, chosen at load. */}
+							<a href="/demo">Try a demo weekend</a>
 						</Button>
 					</div>
 

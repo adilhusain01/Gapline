@@ -6,6 +6,8 @@ import { type Abi, BaseError } from "viem";
 import { useConfig, useWriteContract } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 
+import { isDemo } from "@/lib/wagmi";
+
 type Call = {
 	address: `0x${string}`;
 	abi: Abi;
@@ -29,14 +31,17 @@ export function useTx() {
 			await queryClient.invalidateQueries();
 			toast.success(label, {
 				id: toastId,
-				action: {
-					label: "View",
-					onClick: () =>
-						window.open(
-							`${robinhoodTestnet.blockExplorers.default.url}/tx/${hash}`,
-							"_blank",
-						),
-				},
+				// Demo transactions live on a private fork, not on the public explorer.
+				action: isDemo
+					? undefined
+					: {
+							label: "View",
+							onClick: () =>
+								window.open(
+									`${robinhoodTestnet.blockExplorers.default.url}/tx/${hash}`,
+									"_blank",
+								),
+						},
 			});
 			return hash;
 		} catch (error) {

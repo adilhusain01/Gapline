@@ -1,5 +1,4 @@
 import { gapMarketAbi } from "@gapline/abi";
-import { createFileRoute } from "@tanstack/react-router";
 import { CalendarClock } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -13,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { chainNow } from "@/lib/clock";
 import { usd, usdg } from "@/lib/format";
 import {
 	addresses,
@@ -26,9 +26,8 @@ import {
 import { useUi } from "@/lib/store";
 import { useTx } from "@/lib/useTx";
 
-export const Route = createFileRoute("/app/")({ component: MarketPage });
-
-function MarketPage() {
+/** Market dashboard for the selected stock; shared by /app and /demo. */
+export function MarketPage() {
 	const { markets, isLoading } = useMarkets();
 	const status = useSessionStatus();
 	const stock = useStock();
@@ -52,7 +51,7 @@ function MarketPage() {
 	const canResolve =
 		selected &&
 		!selected.resolved &&
-		Number(selected.reopenTs) * 1000 <= Date.now() &&
+		selected.reopenTs <= BigInt(chainNow()) &&
 		settlementRound !== undefined;
 
 	return (

@@ -11,8 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppBorrowRouteImport } from './routes/app/borrow'
+import { Route as DemoIndexRouteImport } from './routes/demo/index'
+import { Route as DemoBorrowRouteImport } from './routes/demo/borrow'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -34,36 +42,64 @@ const AppBorrowRoute = AppBorrowRouteImport.update({
   path: '/borrow',
   getParentRoute: () => AppRoute,
 } as any)
+const DemoIndexRoute = DemoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DemoRoute,
+} as any)
+const DemoBorrowRoute = DemoBorrowRouteImport.update({
+  id: '/borrow',
+  path: '/borrow',
+  getParentRoute: () => DemoRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/demo': typeof DemoRouteWithChildren
   '/app/borrow': typeof AppBorrowRoute
+  '/demo/borrow': typeof DemoBorrowRoute
   '/app/': typeof AppIndexRoute
+  '/demo/': typeof DemoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app/borrow': typeof AppBorrowRoute
+  '/demo/borrow': typeof DemoBorrowRoute
   '/app': typeof AppIndexRoute
+  '/demo': typeof DemoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/demo': typeof DemoRouteWithChildren
   '/app/borrow': typeof AppBorrowRoute
+  '/demo/borrow': typeof DemoBorrowRoute
   '/app/': typeof AppIndexRoute
+  '/demo/': typeof DemoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/app/borrow' | '/app/'
+  fullPaths:
+    '/' | '/app' | '/demo' | '/app/borrow' | '/demo/borrow' | '/app/' | '/demo/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app/borrow' | '/app'
-  id: '__root__' | '/' | '/app' | '/app/borrow' | '/app/'
+  to: '/' | '/app/borrow' | '/demo/borrow' | '/app' | '/demo'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/demo'
+    | '/app/borrow'
+    | '/demo/borrow'
+    | '/app/'
+    | '/demo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  DemoRoute: typeof DemoRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +118,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/': {
       id: '/app/'
       path: '/'
@@ -95,6 +138,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/borrow'
       preLoaderRoute: typeof AppBorrowRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/demo/': {
+      id: '/demo/'
+      path: '/'
+      fullPath: '/demo/'
+      preLoaderRoute: typeof DemoIndexRouteImport
+      parentRoute: typeof DemoRoute
+    }
+    '/demo/borrow': {
+      id: '/demo/borrow'
+      path: '/borrow'
+      fullPath: '/demo/borrow'
+      preLoaderRoute: typeof DemoBorrowRouteImport
+      parentRoute: typeof DemoRoute
     }
   }
 }
@@ -111,9 +168,22 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface DemoRouteChildren {
+  DemoBorrowRoute: typeof DemoBorrowRoute
+  DemoIndexRoute: typeof DemoIndexRoute
+}
+
+const DemoRouteChildren: DemoRouteChildren = {
+  DemoBorrowRoute: DemoBorrowRoute,
+  DemoIndexRoute: DemoIndexRoute,
+}
+
+const DemoRouteWithChildren = DemoRoute._addFileChildren(DemoRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  DemoRoute: DemoRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

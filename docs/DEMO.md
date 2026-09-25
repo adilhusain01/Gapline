@@ -19,7 +19,7 @@ a fallback, but it ends on submission day, so treat this weekend as the real one
 
 ```bash
 cd gapline
-npx pm2 status                         # awake, relayer, agent, web all "online"
+npx pm2 status                         # relayer, agent, demo, web all "online" (on the VPS)
 tail -3 logs/relayer.log               # recent "mirrored TSLA" / "mirrored AMZN" lines, no repeated errors
 tail -3 logs/agent.log                 # agent started, analyst on/off as intended
 npm run signal -w @gapline/agent       # BTC + Uniswap signals and belief for both stocks (Sep 18 closure)
@@ -35,12 +35,26 @@ cast balance 0x610FdB41DA83138615C317c89fd9EB09271a46fe --ether --rpc-url https:
 - Friday afternoon, run the dress rehearsal once more: `scripts/rehearse-weekend.sh`. It plays the whole weekend
   for both stocks on a throwaway fork with the real agent and should end with the TSLA pool's reserves rising
   (cover paid out on the -3.5% reopen).
-- Mac plugged in, lid open (the `awake` process blocks idle sleep, not lid-close sleep).
 - Optional: put `ANTHROPIC_API_KEY=...` in `.env` and `npx pm2 restart agent` to turn on the news analyst.
 
-If the Mac was asleep or offline at the close, nothing is lost: when the agent comes back it opens the
+If the VPS was down at the close, nothing is lost: when the agent comes back it opens the
 markets for the current closure on its next tick. If the relayer missed rounds, it replays every mainnet
 round it missed, in order.
+
+## Demo on a weekday (`/demo`)
+
+A live market exists only from Friday 20:00 ET to Sunday 20:00 ET. Any other time, open
+https://vps.tail865d46.ts.net/demo (or "Try a demo weekend" on the landing page). It is the same dashboard on a
+private copy of the testnet with its clock on Saturday; the agent has opened both markets and keeps trading, and
+you trade as a funded demo wallet with no wallet extension.
+
+1. Market: the header says "Gap-implied price"; buy a range (for example 5 shares of "-1% to -0.25%").
+2. Borrow: the amber weekend banner; deposit 1 TSLA, borrow 5 USDG, buy 25% cover.
+3. Back on Market, in the demo panel, set the reopening moves (defaults TSLA -3.5%, AMZN +0.8%) and press
+   "Jump to the Sunday reopen". About 10 seconds later both markets show as settled, and the agent has collected
+   the TSLA pool's cover.
+4. Redeem the winning cover shares. "Start over" builds a fresh Saturday (about a minute). The demo is shared by
+   everyone viewing it and resets itself 30 minutes after settling.
 
 ## What to record
 

@@ -1,0 +1,19 @@
+{
+  "name": "@gapline/demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Weekend demo on demand: a private anvil fork held on Saturday with live markets, for /demo in the web app",
+  "type": "module",
+  "scripts": {
+    "start": "tsx --env-file=../../.env src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@gapline/abi": "^1.0.0",
+    "viem": "^2.56.8"
+  }
+}

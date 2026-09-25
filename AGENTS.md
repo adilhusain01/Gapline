@@ -22,8 +22,9 @@ pool consumes the band. Built for the Arbitrum Open House Singapore buildathon (
 | `packages/abi` | Typed ABIs, `stocks` table (mainnet feed/token/Uniswap pool + testnet contracts per stock), `stockByFeed` | `@wagmi/cli` foundry plugin, viem chains |
 | `apps/relayer` | Copies every mainnet RH<stock>/USD round to that stock's testnet MirroredFeed, one stock at a time | viem, tsx |
 | `apps/agent` | Keeper (open, point oracle, hedge, settle, redeem, sweep) + pricing agent with hard caps, per stock; optional Claude analyst | viem, @anthropic-ai/sdk, zod, @stdlib normal cdf |
-| `apps/web` | Landing page at `/` (weekend chart, live TSLA/AMZN strip, how a weekend runs, for lenders); dashboard at `/app` (Market) and `/app/borrow` (Borrow) with the stock picker in its header (zustand `stock`) | TanStack Router + Query, wagmi 3 (injected connector), shadcn/ui (radix-nova), zustand, Tailwind v4 |
-| `ecosystem.config.cjs` | pm2: `awake` (caffeinate), `relayer`, `agent`, `web` (port 4173) | pm2 |
+| `apps/web` | Landing page at `/` (weekend chart, live TSLA/AMZN strip, how a weekend runs, for lenders); dashboard at `/app` (Market) and `/app/borrow` (Borrow) with the stock picker in its header (zustand `stock`); the same pages on the demo fork at `/demo` and `/demo/borrow` (`components/market-page.tsx`, `borrow-page.tsx`) | TanStack Router + Query, wagmi 3 (injected connector), shadcn/ui (radix-nova), zustand, Tailwind v4 |
+| `apps/demo` | Weekday demo controller: a private anvil fork held on the Saturday of the next closure, staged like the rehearsal and driven by the real agent; serves `/rpc` (reads plus the demo wallet's transactions), `/state`, `/reopen`, `/reset` on port 4180 | viem, tsx, anvil |
+| `ecosystem.config.cjs` | pm2: `relayer`, `agent`, `demo`, `web` (port 4173), plus `awake` (caffeinate) on macOS only | pm2 |
 | `docs/` | `DEMO.md` (weekend runbook, pitch, submission text), knowledge graph | |
 
 ## Commands
@@ -48,6 +49,7 @@ npm run abi                                                   # regenerates pack
 
 # services
 npx pm2 start ecosystem.config.cjs && npx pm2 logs            # logs also in logs/*.log
+npx pm2 save                                                  # after changing what runs; pm2-root.service restores it at boot
 npm run signal -w @gapline/agent                              # print BTC + Uniswap signals and belief per stock (pre-flight)
 npm run backtest -w @gapline/agent -- AMZN                    # replay every past weekend, writes docs/backtest-<SYMBOL>.md
 npm run once -w @gapline/agent                                # one keeper + trader cycle
@@ -112,10 +114,22 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   `LmsrMathSol` (`0x8223BBbe2d37e9623faE882888A97C55E2F95BFB`): `costDelta` +50% at 2 ranges, +6% at 7, -21% at
   16; per extra range ~4.2K vs ~9.1K gas. `opt-level "z"` only shrinks it to 18.8 KB. Anvil and forge forks cannot
   run Stylus WASM (code starts `0xEFF000`): fork tests and the rehearsal etch `LmsrMathSol` over the address.
-- Sharing the web app over Tailscale: `vite preview` listens on `localhost` only (`[::1]` on Linux), so proxy
-  `http://localhost:4173`, not `127.0.0.1`; `preview.allowedHosts` admits `*.ts.net` (Vite rejects unknown Host
-  headers). A machine that only serves the web app runs `pm2 start ecosystem.config.cjs --only web` (`awake` is
-  macOS `caffeinate`). Run the relayer and agent on exactly one machine: they share the deployer key.
+- Host (since 2026-09-24): the Linux VPS `vps` (Ubuntu 24.04, Node 24, Foundry 1.5.1) runs everything under pm2,
+  restored at boot by `pm2-root.service`, and serves the web app publicly with `tailscale funnel --https=443
+  http://localhost:4173` at https://vps.tail865d46.ts.net. Run the relayer, agent and demo on exactly one machine:
+  they share the deployer key, and a second relayer would mirror every round twice (`mirror` rejects only older
+  timestamps, not equal ones).
+- Serving: `vite preview` listens on `localhost` only (`[::1]` on Linux), so proxy `http://localhost:4173`, not
+  `127.0.0.1`; `preview.allowedHosts` admits `*.ts.net` (Vite rejects unknown Host headers); `preview.proxy`
+  forwards `/demo-api` to the demo controller on 127.0.0.1:4180.
+- Demo (`/demo`): the wallet is `0xb6E922A053A6FFAf3978048857Db69170196A9dB`, the last 20 bytes of
+  keccak256("gapline demo wallet"), so no one holds its key; the fork impersonates it and funds it (100 USDG,
+  5 TSLA, 5 AMZN, gas). Anvil's dev account `0xf39F...2266` cannot be used: its key is public, and on Robinhood
+  Chain testnet it carries an EIP-7702 delegation (code `0xef0100...`), so `GapMarket` reverts with
+  `ERC1155InvalidReceiver` when minting shares to it. Token balances are set by finding the balance slot (plain
+  slots 0-11 or the OpenZeppelin v5 namespaced slot). The web app picks its chain at page load from the path
+  (`lib/wagmi.ts` `isDemo`), so links between `/demo` and the rest reload the page; the UI clock follows the fork
+  through `setChainOffset` (`lib/clock.ts`), and trading/settle checks use `chainNow()`, never `Date.now()`.
 - `cast` parses negative numbers as flags: put options before `--` and arguments after it.
 - `createMarket` needs the feed's last update at or before the close and no more than 3 days older than it.
 - `oraclePaused()` (corporate actions) was not found on the feed or token contracts; the oracle treats a stale
@@ -150,9 +164,11 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   fees on Sunday, all by the real agent against the v2 contracts. It surfaced six UI and agent bugs, all fixed.
   Rerun 2026-09-23 on v3 for both stocks (TSLA -3.5%, AMZN +0.8%): both markets opened, oracles pointed, both
   pools hedged; TSLA's pool collected 0.25 USDG of cover; residuals and fees collected on both.
+  Rerun 2026-09-24 on the VPS (Linux; the script now formats dates with GNU or BSD `date`): same results.
 
 ## Operating the weekend
 
 See `docs/DEMO.md`. The relayer must run through Friday's close (the market's reference price is the last
 mirrored round) and through Sunday 20:00 ET (settlement needs the reopening round). The agent opens every stock's
-market within a minute of the close and settles each within a minute of its reopening round.
+market within a minute of the close and settles each within a minute of its reopening round. On weekdays, show
+the product at `/demo` (see `docs/DEMO.md`).

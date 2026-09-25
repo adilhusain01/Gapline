@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { shortAddress } from "@/lib/format";
 import { useSessionStatus } from "@/lib/gapline";
 import { useUi } from "@/lib/store";
+import { isDemo } from "@/lib/wagmi";
 
 function SessionPill() {
 	const { isOpen, isFeedFrozen, band } = useSessionStatus();
@@ -189,7 +190,8 @@ export function ConnectButton() {
 
 export function Logo() {
 	return (
-		<Link to="/" className="flex items-center gap-2">
+		// Leaving /demo reloads the page, so the landing page and /app reconnect to the real chain.
+		<Link to="/" reloadDocument={isDemo} className="flex items-center gap-2">
 			<span className="grid size-6 place-items-center rounded-md bg-primary text-primary-foreground">
 				<svg viewBox="0 0 16 16" className="size-3.5" aria-hidden="true">
 					<path
@@ -210,16 +212,17 @@ export function Logo() {
 const navLink =
 	"rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground";
 
-export function AppHeader() {
+/** The dashboard header; `base` is /app on the real chain and /demo on the demo fork. */
+export function AppHeader({ base = "/app" }: { base?: "/app" | "/demo" }) {
 	return (
 		<header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
 			<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
 				<Logo />
 				<nav className="flex items-center gap-1 text-sm">
-					<Link to="/app" activeOptions={{ exact: true }} className={navLink}>
+					<Link to={base} activeOptions={{ exact: true }} className={navLink}>
 						Market
 					</Link>
-					<Link to="/app/borrow" className={navLink}>
+					<Link to={`${base}/borrow`} className={navLink}>
 						Borrow
 					</Link>
 				</nav>

@@ -32,6 +32,8 @@ flowchart LR
   AMZN_testnet_token[/"AMZN testnet token"/]
   Backtest_AMZN[("Backtest AMZN")]
   Decision__v3_Stylus_pricing_and_AMZN>"Decision: v3 Stylus pricing and AMZN"]
+  Demo_controller(["Demo controller"])
+  Decision__run_everything_on_the_VPS>"Decision: run everything on the VPS"]
   GapMarket -->|reads session state from| MarketCalendar
   GapMarket -->|snapshots reference and settles from| MirroredFeed
   GapMarket -->|is collateralized in| USDG_testnet
@@ -71,6 +73,10 @@ flowchart LR
   Agent -->|follows| Backtest_AMZN
   Gapline -->|follows| Decision__v3_Stylus_pricing_and_AMZN
   Weekend_rehearsal -->|etches over the Stylus address| LmsrMathSol
+  Web_app -->|serves /demo from| Demo_controller
+  Demo_controller -->|runs on its fork| Agent
+  Demo_controller -->|forks with| GapMarket
+  Decision__run_everything_on_the_VPS -->|hosts| Demo_controller
 ```
 
 ## Projects
@@ -173,6 +179,14 @@ flowchart LR
 - Wallet stays connected across reloads (wagmi localStorage + reconnectOnMount), shows Reconnecting meanwhile, lists EIP-6963 wallets; checked 2026-09-24 with Playwright and a mock injected wallet on /app and /app/borrow
 - Visual identity since 2026-09-24: navy and amber theme, IBM Plex Sans and Mono; designed with the frontend-design skill and copy edited with the humanizer skill
 
+### Demo controller
+
+- apps/demo, pm2 process demo, port 4180, reached by the web app at /demo-api through vite preview's proxy
+- Starts a private anvil fork of Robinhood Chain testnet, etches LmsrMathSol over the Stylus address, stages Friday (last mainnet price, funded pools with a 5 USDG loan each) and jumps to Saturday noon, where the real agent opens both markets
+- Serves JSON-RPC to the fork: reads plus eth_sendTransaction from the demo wallet 0xb6E9...A9dB only; anvil_ and evm_ methods are refused
+- POST /reopen posts chosen reopening moves at Sunday 20:00 ET and runs the agent to settle; POST /reset builds a fresh Saturday; resets itself 30 minutes after settling
+- Checked 2026-09-24 in a browser on the public URL: buy a range, deposit, borrow, buy cover, reopen TSLA -3.5% / AMZN +0.8%, both markets settled, cover redeemed for 1.25 USDG
+
 ## Externals
 
 ### Chainlink RHTSLA/USD mainnet
@@ -251,6 +265,11 @@ flowchart LR
 - Stylus: targets the Arbitrum buildathon theme; kept despite +6% gas at 7 ranges because the cost is the chain's missing cache, finer ranges already win, and parity is proven on-chain
 - AMZN: second-deepest faucet stock with a deep Uniswap pool; fitted separately because its gaps and BTC beta differ from TSLA
 - Budget: depth 10 per stock so one faucet claim (100 USDG) covers two seeds, two pools and the agent caps
+
+### Decision: run everything on the VPS
+
+- 2026-09-24: relayer, agent, demo and web app move from the Mac to the Linux VPS under pm2, restored at boot, served by Tailscale Funnel
+- They share the deployer key, so they run on one machine only; the Mac's copies must be stopped first
 
 ## Evidences
 

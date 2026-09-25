@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { chainNow } from "@/lib/clock";
 import { rangeLabel, usdg } from "@/lib/format";
 import {
 	addresses,
@@ -43,7 +44,7 @@ export function ProtectLoanCard({
 	const payout = ((debt ?? 0n) * BigInt(level)) / 100n; // USDG units
 	const shares = payout * 10n ** 12n; // each winning share pays 1 USDG
 	const tradable =
-		market && !market.resolved && Number(market.reopenTs) * 1000 > Date.now();
+		market && !market.resolved && market.reopenTs > BigInt(chainNow());
 
 	const quote = useReadContract({
 		address: addresses.gapMarket,

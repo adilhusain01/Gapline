@@ -272,6 +272,25 @@
         "AMZN: second-deepest faucet stock with a deep Uniswap pool; fitted separately because its gaps and BTC beta differ from TSLA",
         "Budget: depth 10 per stock so one faucet claim (100 USDG) covers two seeds, two pools and the agent caps"
       ]
+    },
+    {
+      "name": "Demo controller",
+      "entityType": "service",
+      "observations": [
+        "apps/demo, pm2 process demo, port 4180, reached by the web app at /demo-api through vite preview's proxy",
+        "Starts a private anvil fork of Robinhood Chain testnet, etches LmsrMathSol over the Stylus address, stages Friday (last mainnet price, funded pools with a 5 USDG loan each) and jumps to Saturday noon, where the real agent opens both markets",
+        "Serves JSON-RPC to the fork: reads plus eth_sendTransaction from the demo wallet 0xb6E9...A9dB only; anvil_ and evm_ methods are refused",
+        "POST /reopen posts chosen reopening moves at Sunday 20:00 ET and runs the agent to settle; POST /reset builds a fresh Saturday; resets itself 30 minutes after settling",
+        "Checked 2026-09-24 in a browser on the public URL: buy a range, deposit, borrow, buy cover, reopen TSLA -3.5% / AMZN +0.8%, both markets settled, cover redeemed for 1.25 USDG"
+      ]
+    },
+    {
+      "name": "Decision: run everything on the VPS",
+      "entityType": "decision",
+      "observations": [
+        "2026-09-24: relayer, agent, demo and web app move from the Mac to the Linux VPS under pm2, restored at boot, served by Tailscale Funnel",
+        "They share the deployer key, so they run on one machine only; the Mac's copies must be stopped first"
+      ]
     }
   ],
   "relations": [
@@ -469,6 +488,26 @@
       "from": "Weekend rehearsal",
       "relationType": "etches over the Stylus address",
       "to": "LmsrMathSol"
+    },
+    {
+      "from": "Web app",
+      "to": "Demo controller",
+      "relationType": "serves /demo from"
+    },
+    {
+      "from": "Demo controller",
+      "to": "Agent",
+      "relationType": "runs on its fork"
+    },
+    {
+      "from": "Demo controller",
+      "to": "GapMarket",
+      "relationType": "forks with"
+    },
+    {
+      "from": "Decision: run everything on the VPS",
+      "to": "Demo controller",
+      "relationType": "hosts"
     }
   ]
 }

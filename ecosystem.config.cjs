@@ -1,14 +1,21 @@
-// pm2 process file: `npx pm2 start ecosystem.config.cjs` runs everything the live weekend needs.
+// pm2 process file: `npx pm2 start ecosystem.config.cjs` runs everything the live weekend needs, plus the
+// weekday demo. Runs on one machine only: the relayer, agent and demo sign with the deployer key.
+const onMac = process.platform === "darwin";
+
 module.exports = {
   apps: [
-    {
-      // Keeps the Mac from idle- or system-sleeping while the weekend runs (macOS built-in).
-      name: "awake",
-      script: "caffeinate",
-      args: "-ims",
-      interpreter: "none",
-      autorestart: true,
-    },
+    ...(onMac
+      ? [
+          {
+            // Keeps the Mac from idle- or system-sleeping while the weekend runs (macOS built-in).
+            name: "awake",
+            script: "caffeinate",
+            args: "-ims",
+            interpreter: "none",
+            autorestart: true,
+          },
+        ]
+      : []),
     {
       name: "relayer",
       cwd: "apps/relayer",
@@ -28,6 +35,18 @@ module.exports = {
       restart_delay: 10000,
       out_file: "../../logs/agent.log",
       error_file: "../../logs/agent.log",
+    },
+    {
+      // Weekday demo: a private anvil fork held on Saturday, served to the web app at /demo through /demo-api.
+      name: "demo",
+      cwd: "apps/demo",
+      script: "npm",
+      args: "run start",
+      autorestart: true,
+      restart_delay: 10000,
+      kill_timeout: 5000,
+      out_file: "../../logs/demo.log",
+      error_file: "../../logs/demo.log",
     },
     {
       name: "web",

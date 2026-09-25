@@ -1,5 +1,4 @@
 import { gapGuardedLendingPoolAbi } from "@gapline/abi";
-import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { erc20Abi, formatUnits, maxUint256, parseUnits } from "viem";
@@ -22,8 +21,6 @@ import {
 } from "@/lib/gapline";
 import { useTx } from "@/lib/useTx";
 
-export const Route = createFileRoute("/app/borrow")({ component: LendPage });
-
 function Row({
 	label,
 	value,
@@ -45,7 +42,8 @@ function Row({
 	);
 }
 
-function LendPage() {
+/** Borrow dashboard for the selected stock; shared by /app and /demo. */
+export function BorrowPage() {
 	const { address, isConnected } = useAccount();
 	const position = usePosition();
 	const wallet = useWalletState();

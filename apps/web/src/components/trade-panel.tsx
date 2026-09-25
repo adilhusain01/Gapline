@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { chainNow } from "@/lib/clock";
 import { percent, rangeLabel, usdg } from "@/lib/format";
 import {
 	addresses,
@@ -60,7 +61,7 @@ export function TradePanel({
 	const cost = (quote.data as bigint | undefined) ?? 0n;
 	const held = shares[outcome] ?? 0n;
 	const tradingClosed =
-		market.resolved || Number(market.reopenTs) * 1000 <= Date.now();
+		market.resolved || market.reopenTs <= BigInt(chainNow());
 	const needsApproval = side === "buy" && wallet.marketAllowance < cost;
 	const isActiveSource = status.activeMarketId === market.id;
 

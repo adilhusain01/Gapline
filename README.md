@@ -125,7 +125,8 @@ apps/relayer        copies each stock's mainnet Chainlink rounds to its testnet 
 apps/agent          keeper + pricing agent per stock (opens, prices, settles and collects each weekend)
 apps/web            TanStack Router + Query, wagmi, shadcn/ui, zustand; landing page at /, dashboard at /app and
                     /app/borrow; live numbers and countdowns refresh in place
-ecosystem.config.cjs  pm2 processes for the relayer, agent and web app
+apps/demo           weekday demo: a private fork held on Saturday, served to the web app at /demo
+ecosystem.config.cjs  pm2 processes for the relayer, agent, demo and web app
 docs/DEMO.md        weekend runbook, recording plan, pitch and submission text
 docs/knowledge-graph.md   components, addresses, measured facts and decisions (source: knowledge-graph.json)
 AGENTS.md / CLAUDE.md     instructions for coding agents working in this repo
@@ -208,17 +209,19 @@ a small sample; the parameters are configurable and the tables regenerate as wee
 npm install
 cp .env.example .env                  # PRIVATE_KEY of a funded Robinhood testnet wallet
 npm run abi                           # regenerate typed ABIs after contract changes
-npx pm2 start ecosystem.config.cjs    # relayer, agent, and the web app on http://localhost:4173 (dashboard: /app)
+npx pm2 start ecosystem.config.cjs    # relayer, agent, demo, and the web app on http://localhost:4173 (dashboard: /app)
 npx pm2 logs                          # watch them
+npx pm2 save && npx pm2 startup       # restore them at boot
+tailscale funnel --bg --https=443 http://localhost:4173   # public URL; `tailscale serve` keeps it tailnet-only
 ```
 
-To share the web app from another machine (for example a server), run only it there and put it behind Tailscale;
-the relayer and agent stay on the one machine already running them, since both sign with the deployer key:
+Run all of it on one machine: the relayer, agent and demo sign with the deployer key. The live deployment runs on
+a Linux VPS at https://vps.tail865d46.ts.net.
 
-```bash
-npx pm2 start ecosystem.config.cjs --only web
-tailscale funnel --bg --https=443 http://localhost:4173   # public; `tailscale serve` keeps it tailnet-only
-```
+**Weekday demo.** A real market exists only while the feeds are frozen (Friday 20:00 ET to Sunday 20:00 ET).
+Any other day, `/demo` runs the same dashboard on a private fork of the testnet whose clock is on the next
+Saturday: the agent has opened both markets, visitors trade with a funded demo wallet, and a button jumps to the
+Sunday reopen with chosen moves, where the agent settles and collects. Nothing touches the real chain.
 
 Deploying fresh contracts: `cd contracts && forge script script/Deploy.s.sol --rpc-url robinhood_testnet
 --private-key $PRIVATE_KEY --broadcast --verify --verifier blockscout
