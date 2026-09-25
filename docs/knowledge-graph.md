@@ -180,6 +180,7 @@ flowchart LR
 - Wallet stays connected across reloads (wagmi localStorage + reconnectOnMount), shows Reconnecting meanwhile, lists EIP-6963 wallets; checked 2026-09-24 with Playwright and a mock injected wallet on /app and /app/borrow
 - Visual identity since 2026-09-24: navy and amber theme, IBM Plex Sans and Mono; designed with the frontend-design skill and copy edited with the humanizer skill
 - Borrow page caps each wallet at 5 USDG of debt per pool (app-side), shows borrowing power beside it, and explains a blocked borrow (demo cap, pool cash or LTV)
+- Landing explainer (2026-09-24): five-step weekend walkthrough on a client-side LMSR with the live parameters (buy a range, see the oracle band, the lender's collateral value and the Sunday payout), an architecture diagram of the seven pieces, and the safeguards; built with the frontend-design, diagram-design, dataviz and humanizer skills
 
 ### Demo controller
 

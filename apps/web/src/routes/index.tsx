@@ -6,6 +6,8 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Logo, ThemeToggle } from "@/components/app-header";
+import { ArchitectureDiagram } from "@/components/explainer/architecture-diagram";
+import { Walkthrough } from "@/components/explainer/walkthrough";
 import { Countdown } from "@/components/live-time";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,18 +29,19 @@ function LandingHeader() {
 			<div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-4 px-4">
 				<Logo />
 				<nav className="hidden items-center gap-1 text-sm text-muted-foreground sm:flex">
-					<a
-						href="#how"
-						className="rounded-md px-2.5 py-1.5 hover:text-foreground"
-					>
-						How it works
-					</a>
-					<a
-						href="#lenders"
-						className="rounded-md px-2.5 py-1.5 hover:text-foreground"
-					>
-						For lenders
-					</a>
+					{[
+						["#how", "How it works"],
+						["#system", "What runs it"],
+						["#trust", "Why trust it"],
+					].map(([href, label]) => (
+						<a
+							key={href}
+							href={href}
+							className="rounded-md px-2.5 py-1.5 hover:text-foreground"
+						>
+							{label}
+						</a>
+					))}
 				</nav>
 				<div className="ml-auto flex items-center gap-2">
 					<ThemeToggle />
@@ -125,45 +128,60 @@ function LiveStrip() {
 	);
 }
 
-const steps = [
-	{
-		when: "Friday, 20:00 ET",
-		title: "The feed stops",
-		body: "Chainlink stops updating at the close. Gapline opens a market on where the stock reopens, split into seven price ranges.",
-	},
-	{
-		when: "Saturday and Sunday",
-		title: "People trade the ranges",
-		body: "Buying a range costs USDG and raises its odds. A pricing agent trades too, using Uniswap and Bitcoin moves.",
-	},
-	{
-		when: "Every block",
-		title: "The oracle reads the market",
-		body: "The odds become a price and a range, published through the same interface lenders already read from Chainlink.",
-	},
-	{
-		when: "Sunday, 20:00 ET",
-		title: "The market settles",
-		body: "The first Chainlink price after the reopen picks the winning range. Each winning share pays 1 USDG.",
-	},
-];
+/** Each piece in one line, in the order the diagram reads. */
+const components = [
+	[
+		"MarketCalendar",
+		"Knows when NYSE is open, including holidays and daylight-saving changes.",
+	],
+	[
+		"GapMarket",
+		"The market on where the stock reopens. Holds the USDG and pays the winners.",
+	],
+	[
+		"LmsrMath",
+		"Prices every trade. A Rust program on Arbitrum Stylus that matches the Solidity reference on 240 of 240 markets tested on-chain.",
+	],
+	[
+		"ImpliedPriceOracle",
+		"Turns the odds into a price and a range behind Chainlink's standard interface, and passes the live price through on weekdays.",
+	],
+	[
+		"Lending pool",
+		"A demo pool that lends USDG against TSLA and AMZN using the range, and insures itself each weekend.",
+	],
+	[
+		"Agent",
+		"Opens each weekend's markets, trades toward its forecast, buys the pool's cover, then settles and collects.",
+	],
+	[
+		"Relayer",
+		"Copies Chainlink's mainnet stock prices to the testnet with their original timestamps. On mainnet the contracts read Chainlink directly.",
+	],
+] as const;
 
-const lenderTerms = [
-	{
-		term: "New loans",
-		detail: "are valued at the low end of the range.",
-	},
-	{
-		term: "Liquidations",
-		detail:
-			"happen only when a loan is underwater at the high end, so one thin weekend trade cannot trigger them.",
-	},
-	{
-		term: "Gap cover",
-		detail:
-			"pays borrowers if the stock reopens 3% or more lower. The demo pool also covers its own loans each weekend.",
-	},
-];
+const safeguards = [
+	[
+		"Moving the price costs money",
+		"Shifting the implied price means buying ranges from the market maker at rising prices. The oracle ignores markets below a minimum depth and only switches to a deeper one.",
+	],
+	[
+		"Settlement can't be cherry-picked",
+		"Only the first Chainlink price at or after the reopen settles a market; the contract checks the price before it was still from the weekend.",
+	],
+	[
+		"The forecast is tested",
+		"Over TSLA's 13 past weekends, the agent's forecast missed the reopen by 0.39 points on average, against 0.67 for assuming no change. AMZN: 0.30 against 0.60.",
+	],
+	[
+		"The agent has hard limits",
+		"At most 3 USDG a trade and 10 USDG a market, and every transaction is simulated before it is sent.",
+	],
+	[
+		"The money adds up",
+		"Fuzz tests run 1,000 random trade sequences and settlements and check the market can always pay every winner.",
+	],
+] as const;
 
 function Landing() {
 	return (
@@ -202,42 +220,75 @@ function Landing() {
 					id="how"
 					className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-16"
 				>
-					<h2 className="text-2xl font-semibold tracking-tight">
-						How a weekend runs
-					</h2>
-					<ol className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-						{steps.map((step) => (
-							<li key={step.title} className="border-t-2 border-band/60 pt-4">
-								<p className="text-sm text-band">{step.when}</p>
-								<h3 className="mt-2 font-medium">{step.title}</h3>
-								<p className="mt-1.5 text-sm text-muted-foreground">
-									{step.body}
-								</p>
-							</li>
-						))}
-					</ol>
+					<div className="max-w-2xl">
+						<h2 className="text-3xl font-semibold tracking-tight">
+							One weekend, step by step
+						</h2>
+						<p className="mt-3 text-muted-foreground">
+							An example with TSLA closing Friday at $365. The market below is a
+							simulation that uses the same rules as the live contracts, so you
+							can trade it and follow the effect all the way to Monday.
+						</p>
+					</div>
+					<div className="mt-10">
+						<Walkthrough />
+					</div>
 				</section>
 
 				<section
-					id="lenders"
+					id="system"
+					className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-16"
+				>
+					<div className="max-w-2xl">
+						<h2 className="text-3xl font-semibold tracking-tight">
+							What runs it
+						</h2>
+						<p className="mt-3 text-muted-foreground">
+							Five contracts on Robinhood Chain and two small programs. A lender
+							only ever talks to the oracle.
+						</p>
+					</div>
+					<div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
+						<div>
+							<ArchitectureDiagram />
+							<p className="mt-2 text-xs text-muted-foreground sm:hidden">
+								Scroll the diagram sideways to see all of it.
+							</p>
+						</div>
+						<dl className="divide-y border-y">
+							{components.map(([name, meaning]) => (
+								<div key={name} className="py-3">
+									<dt className="font-medium">{name}</dt>
+									<dd className="mt-0.5 text-sm text-muted-foreground">
+										{meaning}
+									</dd>
+								</div>
+							))}
+						</dl>
+					</div>
+				</section>
+
+				<section
+					id="trust"
 					className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-8 px-4 py-16 lg:grid-cols-[1fr_2fr]"
 				>
 					<div>
-						<h2 className="text-2xl font-semibold tracking-tight">
-							For lenders
+						<h2 className="text-3xl font-semibold tracking-tight">
+							Why the price holds up
 						</h2>
-						<p className="mt-2 max-w-sm text-muted-foreground">
-							A demo lending pool reads the range instead of the frozen feed.
+						<p className="mt-3 max-w-sm text-muted-foreground">
+							A weekend price is only useful if it is expensive to fake and
+							settles honestly.
 						</p>
 					</div>
 					<dl className="divide-y border-y">
-						{lenderTerms.map((item) => (
+						{safeguards.map(([title, detail]) => (
 							<div
-								key={item.term}
-								className="grid gap-1 py-4 sm:grid-cols-[10rem_1fr]"
+								key={title}
+								className="grid gap-1 py-4 sm:grid-cols-[14rem_1fr] sm:gap-6"
 							>
-								<dt className="font-medium">{item.term}</dt>
-								<dd className="text-muted-foreground">{item.detail}</dd>
+								<dt className="font-medium">{title}</dt>
+								<dd className="text-muted-foreground">{detail}</dd>
 							</div>
 						))}
 					</dl>

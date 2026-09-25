@@ -22,7 +22,7 @@ pool consumes the band. Built for the Arbitrum Open House Singapore buildathon (
 | `packages/abi` | Typed ABIs, `stocks` table (mainnet feed/token/Uniswap pool + testnet contracts per stock), `stockByFeed` | `@wagmi/cli` foundry plugin, viem chains |
 | `apps/relayer` | Copies every mainnet RH<stock>/USD round to that stock's testnet MirroredFeed, one stock at a time | viem, tsx |
 | `apps/agent` | Keeper (open, point oracle, hedge, settle, redeem, sweep) + pricing agent with hard caps, per stock; optional Claude analyst | viem, @anthropic-ai/sdk, zod, @stdlib normal cdf |
-| `apps/web` | Landing page at `/` (weekend chart, live TSLA/AMZN strip, how a weekend runs, for lenders); dashboard at `/app` (Market) and `/app/borrow` (Borrow) with the stock picker in its header (zustand `stock`); the same pages on the demo fork at `/demo` and `/demo/borrow` (`components/market-page.tsx`, `borrow-page.tsx`) | TanStack Router + Query, wagmi 3 (injected connector), shadcn/ui (radix-nova), zustand, Tailwind v4 |
+| `apps/web` | Landing page at `/` (weekend chart, live TSLA/AMZN strip; "One weekend, step by step": five steps on a simulated market with the live parameters in `components/explainer/`, where buying a range moves the oracle band, the lender's numbers and the Sunday payout; an architecture diagram; why the price holds up); dashboard at `/app` (Market) and `/app/borrow` (Borrow) with the stock picker in its header (zustand `stock`); the same pages on the demo fork at `/demo` and `/demo/borrow` (`components/market-page.tsx`, `borrow-page.tsx`) | TanStack Router + Query, wagmi 3 (injected connector), shadcn/ui (radix-nova), zustand, Tailwind v4 |
 | `apps/demo` | Weekday demo controller: a private anvil fork held on the Saturday of the next closure, staged like the rehearsal and driven by the real agent; serves `/rpc` (reads plus the demo wallet's transactions), `/state`, `/reopen`, `/reset` on port 4180 | viem, tsx, anvil |
 | `ecosystem.config.cjs` | pm2: `relayer`, `agent`, `demo`, `web` (port 4173), plus `awake` (caffeinate) on macOS only | pm2 |
 | `docs/` | `DEMO.md` (weekend runbook, pitch, submission text), knowledge graph | |
@@ -78,7 +78,9 @@ save workspace deps. npm blocks install scripts by default; `esbuild` is already
   gap range and primary actions, slate (`--frozen`) for the frozen Chainlink line; IBM Plex Sans for text and
   IBM Plex Mono for prices only (`@fontsource`), all set in the theme. The landing page's one bold element is
   the weekend chart (`components/weekend-chart.tsx`); keep the rest plain: no card grids, stat rows, all-caps
-  labels or arrows on buttons.
+  labels or arrows on buttons. `components/explainer/weekend-math.ts` mirrors the contracts' parameters (depth
+  10, ranges, 2% tails, 1% fee, 2-sigma band, 50% LTV, 70% liquidation, 10% cover): change it with them. The
+  architecture diagram follows the diagram-design rules (right-angle connectors, masked labels, one focal node).
 - Adding a stock: add it to `stocks()` in `Deploy.s.sol` and `MAINNET_STOCKS` in `packages/abi/src/index.ts`
   (mainnet feed, token, deepest Uniswap v3 USDG pool with the stock as token0), deploy, `npm run abi`, run its
   backtest and add its fit to `stockOverrides` in `apps/agent/src/config.ts`. Everything else loops over stocks.
